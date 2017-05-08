@@ -6,19 +6,19 @@ Reddit bot framework for node.js
 npm install snooper --save
 ```
 
-## api overview
+## Api Overview
 
--snooper.watcher.CommentWatcher
-    -event: 'comment'
-    -watcher.close()
+- snooper.watcher.CommentWatcher
+    - event: 'comment'
+    - watcher.close()
 
--snooper.watcher.PostWatcher
-    -event: 'post'
-    -watcher.close()
+- snooper.watcher.PostWatcher
+    - event: 'post'
+    - watcher.close()
 
 // handles retries and error checking
--snooper.api.get()
--snooper.api.post()
+- snooper.api.get()
+- snooper.api.post()
 
 
 ## Library usage
@@ -36,7 +36,7 @@ var Snooper = require('snooper')
 
 ## Reddit Watcher
 
-example unexpected factorial bot
+### example unexpected factorial bot
 ``` js
 var commentWatcher = new snooper.watcher.CommentWatcher('all')
     .on('comment', function(comment) {
@@ -48,7 +48,7 @@ var commentWatcher = new snooper.watcher.CommentWatcher('all')
 commentWatcher.close()
 ```
 
-download all gifs from r/gifs with over 100 upvotes
+### download all gifs from r/gifs with over 100 upvotes
 ``` js
 var postWatcher = new snooper.PostWatcher('gifs')
     .on('post', function(post) {
