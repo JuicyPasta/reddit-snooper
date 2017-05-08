@@ -3,15 +3,16 @@ var request = require('request')
 
 const EventEmitter = require('events');
 
-module.exports = function(options) {
+module.exports = function(snooper_options) {
 
 
 class RedditWatcher extends EventEmitter {
-  constructor(start_page) {
+  constructor(start_page, item_type, options) {
     super()
-    start_page = start_page || 'https://reddit.com/r/all/comments.json'
+
+    this.item_type = item_type
     this.once('newListener', function(event, listener) {
-      if (event == "item") {
+      if (event == item_type) {
         this._concurrent_item_emitter(start_page, 0, '')
       } else {
         console.log("whats this")
@@ -27,7 +28,9 @@ class RedditWatcher extends EventEmitter {
         url: start_page,
         qs: { after: after_name }
     }, function (err, res, body_json) {
-        if (err) return cb(err)
+        if (err) {
+          saved_this.emit('error', err)
+        } 
 
         var body = JSON.parse(body_json)
         var children = body.data.children
@@ -56,7 +59,7 @@ class RedditWatcher extends EventEmitter {
 
             if (until_name) {
                 children.map(function(comment) {
-                    saved_this.emit('item', comment)
+                    saved_this.emit(saved_this.item_type, comment)
                 })
             } 
         } 
@@ -75,8 +78,23 @@ class RedditWatcher extends EventEmitter {
 
 }
 
+function getCommentWatcher(subreddit, options) {
+    subreddit = subreddit.trim().replace('/', '')
+    let start_page = 'https://reddit.com/r/' + subreddit + '/comments.json'
+
+    return new RedditWatcher(start_page, 'comment', options)
+}
+
+function getPostWatcher(subreddit, options) {
+    subreddit = subreddit.trim().replace('/', '')
+    let start_page = 'https://reddit.com/r/' + subreddit + '/new.json'
+
+    return new RedditWatcher(start_page, 'post', options)
+}
 
 return {
-  RedditWatcher: RedditWatcher
+  getCommentWatcher: getCommentWatcher,
+  getPostWatcher: getPostWatcher
 }
+
 }
