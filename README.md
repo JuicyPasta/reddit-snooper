@@ -1,4 +1,4 @@
-# snooper [![Build Status](https://travis-ci.org/JuicyPasta/Snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/Snooper)
+# snooper [![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/Snooper)
 
 Reddit bot framework that allows you to easily create high performance reddit bots with nodejs. 
 
@@ -12,6 +12,7 @@ npm install snooper --save
 var Snooper = require('snooper')
     snooper = new Snooper(
         {
+            // credential information is not needed for snooper.watcher
             username: 'reddit_username',
             password: 'reddit password',
             app_id: 'reddit api app id',
@@ -22,7 +23,7 @@ var Snooper = require('snooper')
 
 ## Reddit Watcher
 
-#### example unexpected factorial bot
+#### unexpected factorial bot
 ``` js
 var commentWatcher = snooper.watcher.getCommentWatcher('all')
     .on('comment', function(comment) {
@@ -59,7 +60,9 @@ var postWatcher = snooper.getPostWatcher('gifs')
 
 ## Reddit API
 
-Snooper handles Reddit response codes, rate limit throttling and retries
+Snooper by default handles retries, rate limit throttling conditions and Reddit's different response codes. 
+
+Keep in mind that new accounts get little to no posting privelages (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account. 
 
 [Reddit API Documentation](https://www.reddit.com/dev/api/)
 
@@ -86,3 +89,17 @@ snooper.api.post('api/v1/gold/give', {
 })
 
 ```
+
+## API setup 
+
+All you need to do to get up and running is obtain an api_id and an api_secret. Both can be obtained from [Reddit app console](https://reddit.com/prefs/apps)
+1. Create (or log into) a reddit account
+2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
+3. Select 'create another app...' at the bottom
+4. Fill in the name, description and click on 'script', put in anything for the redirect uri, its not needed and you can change it later if you want to
+5. Copy down the 'secret' that is your api_secret, the 14 character string by the name of your app is your app_id
+6. Use these values and your credentials to configure the library
+
+
+## Coming Soon
+- Support for multiple accounts
