@@ -1,0 +1,25 @@
+{
+  "name": "Snooper",
+  "version": "0.0.0",
+  "description": "Simple Reddit bot framework for nodejs",
+  "main": "",
+  "dependencies": {
+    "request": "^2.81.0"
+  },
+  "devDependencies": {
+    "mocha": "^3.3.0",
+    "should": "^11.2.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JuicyPasta/Snooper"
+  },
+  "author": "",
+  "license": "BSD-2-Clause",
+  "bugs": {
+    "url": "https://github.com/JuicyPasta/Snooper/issues"
+  },
+  "scripts": {
+    "test": "mocha test"
+  }
+}
