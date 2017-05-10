@@ -1,5 +1,5 @@
 {
-  "name": "snooper",
+  "name": "reddit-snooper",
   "version": "0.0.0",
   "description": "Simple Reddit bot framework for nodejs",
   "main": "",
@@ -12,12 +12,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/JuicyPasta/snooper"
+    "url": "https://github.com/JuicyPasta/reddit-snooper"
   },
   "author": "",
   "license": "BSD-2-Clause",
   "bugs": {
-    "url": "https://github.com/JuicyPasta/snooper/issues"
+    "url": "https://github.com/JuicyPasta/reddit-snooper/issues"
   },
   "scripts": {
     "test": "mocha test"

@@ -12,7 +12,7 @@ snooper.api.post('api/comment', {
     console.log(data)
 })
 
-/*
+*/
 
 snooper.api.get('api/v1/me/karma', {}, function(err, data) {
     console.log(err)
@@ -25,4 +25,3 @@ snooper.api.patch('/api/v1/me/prefs/', {
 }, function(err, data) {
 
 })
-*/

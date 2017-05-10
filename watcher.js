@@ -9,6 +9,7 @@ module.exports = function(snooper_options) {
 class RedditWatcher extends EventEmitter {
   constructor(start_page, item_type, options) {
     super()
+    this.is_closed = false
 
     this.item_type = item_type
     this.once('newListener', function(event, listener) {
@@ -21,8 +22,15 @@ class RedditWatcher extends EventEmitter {
     
   }
 
+  close() {
+    this.is_closed = true
+  }
+
   // emits 'item'
   _get_items(start_page, after_name, until_name, cb_first_item) {
+      if (this.is_closed)
+        return
+
     let saved_this = this
     request({
         url: start_page,
@@ -32,7 +40,12 @@ class RedditWatcher extends EventEmitter {
           saved_this.emit('error', err)
         } 
 
+        try {
         var body = JSON.parse(body_json)
+        } catch (err) {
+          saved_this.emit('error', "could not parse input")
+          console.log(body)
+        }
         var children = body.data.children
 
         if (children.length > 0) {
@@ -54,7 +67,8 @@ class RedditWatcher extends EventEmitter {
                 }
             }
 
-            if (!is_done && until_name) saved_this._get_items(start_page, after_name, until_name, cb_first_item)
+            if (!is_done && until_name) 
+              saved_this._get_items(start_page, after_name, until_name, cb_first_item)
             
 
             if (until_name) {
@@ -67,6 +81,8 @@ class RedditWatcher extends EventEmitter {
   }
 
   _concurrent_item_emitter(start_page, wait_interval, until_name) {
+      if (this.is_closed)
+        return
       let saved_this = this
 
       setTimeout(function() {

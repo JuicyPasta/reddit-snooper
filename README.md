@@ -4,12 +4,12 @@ Reddit bot framework that allows you to easily create high performance reddit bo
 
 ## Installing snooper
 ``` bash
-npm install snooper --save
+npm install reddit-snooper --save
 ```
 
 ## Library usage
 ``` js
-var Snooper = require('snooper')
+var Snooper = require('reddit-snooper')
     snooper = new Snooper(
         {
             // credential information is not needed for snooper.watcher
@@ -80,7 +80,7 @@ snooper.api.patch('/api/v1/me/prefs/', {
 
 })
 
-// activate turbo mode which doubles overall performance       (kidding)
+// activate turbo mode which doubles performance       (kidding)
 snooper.api.post('api/v1/gold/give', {
     months: 1,
     username: 'juicypasta'

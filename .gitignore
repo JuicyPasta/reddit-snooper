@@ -31,3 +31,5 @@ node_modules
 
 # Secret files
 secrets
+
+.idea

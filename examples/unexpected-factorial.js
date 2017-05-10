@@ -15,11 +15,14 @@ var Snooper = require('../snooper'),
         */
 
 
-snooper.watcher.getCommentWatcher('all')
+snooper.watcher.getCommentWatcher('all') // looks in a specific subreddit, in this case 'all' were looking at comments posted anywhere on the website
     .on('comment', function(comment) {
+        console.log(comment.data.id)
+        // only reply if the comment contains a factorial
         let match = comment.data.body.match('[0-9]+!')
         if (match && comment.data.author == 'juicypasta') {
             console.log('found match ' + comment.data.author)
+            // post a reply
             snooper.api.post('/api/comment', {
                 api_type:'json',
                 text: match[0] + " = " + factorial(+match[0].substring(0, match.length-1)),
