@@ -1,13 +1,23 @@
-# snooper [![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/Snooper)
+# Reddit-Snooper - Simplified Reddit bot framework for nodejs
 
-Reddit bot framework that allows you to easily create high performance Reddit bots with nodejs. 
+[![npm package](https://nodei.co/npm/reddit-snooper.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/reddit-snooper/)
 
-## Installing snooper
+[![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/snooper)
+[![dependencies Status](https://david-dm.org/JuicyPasta/reddit-snooper/status.svg)](https://david-dm.org/JuicyPasta/reddit-snooper)
+[![Gitter](https://badges.gitter.im/reddit-snooper-nodjs/Lobby.svg)](https://gitter.im/reddit-snooper-nodjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
+
+## Table of Contents
+- [Setup and Configuration](#setup-and-configuration)
+- [Watcher](#reddit-watcher-(snooper.watcher))
+- [Api](#reddit-api-(snooper.api))
+
+## Setup and Configuration
+### Installing reddit-snooper
 ``` bash
 npm install reddit-snooper --save
 ```
 
-## Library usage
+### Library usage and configuration
 ``` js
 var Snooper = require('reddit-snooper')
     snooper = new Snooper(
@@ -24,8 +34,25 @@ var Snooper = require('reddit-snooper')
         })
 ```
 
-## Reddit Watcher
+### API setup 
+All you need to do to get up and running is obtain an api_id and an api_secret. Both can be obtained from [Reddit app console](https://reddit.com/prefs/apps)
+1. Create (or log into) a reddit account
+2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
+3. Select 'create another app...' at the bottom
+4. Fill in the name, description and click on 'script', put in anything for the redirect uri, its not needed and you can change it later if you want to
+5. Copy down the 'secret' that is your api_secret, the 14 character string by the name of your app is your app_id
+6. Use these values and your credentials to configure the library
 
+
+## Reddit Watcher (snooper.watcher)
+Reddit watchers are event emitters that trigger when new things happen on the website
+Right now you can watch for:
+- new comments across the website or on a specific subreddit
+- new posts across the website or on a specific subreddit
+- new posts reaching the first x pages of different listings (hot, top_24, top_day, controversial, rising) across the website or subreddit
+
+
+### examples (full programs in the examples folder)
 #### unexpected factorial bot
 ``` js
 snooper.watcher.getCommentWatcher("all")
@@ -50,7 +77,18 @@ snooper.watcher.getCommentWatcher("all")
 .on("error", console.error)
 
 // when you are done 
-commentWatcher.close()
+// commentWatcher.close()
+```
+
+#### download all gifs that make it to the front 2 pages of hot on r/gifs
+``` js
+
+// NOTICE THIS IS DIFFERENT THAT JUST DOWNLOADING THE FIRST 2 PAGES
+
+```
+#### repost all gilded comments with over 1000 ups to r/bestof (please dont do this)
+``` js
+
 ```
 
 #### download all pics that are posted to r/pics
@@ -71,7 +109,7 @@ snooper.watcher.getPostWatcher('pics')
 ```
 
 
-## Reddit API
+## Reddit API (snooper.api)
 
 Snoopers api component at the moment is an agnostic wrapper around reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
 
@@ -102,15 +140,6 @@ snooper.api.post('api/v1/gold/give', {
 })
 
 ```
-
-## API setup 
-All you need to do to get up and running is obtain an api_id and an api_secret. Both can be obtained from [Reddit app console](https://reddit.com/prefs/apps)
-1. Create (or log into) a reddit account
-2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
-3. Select 'create another app...' at the bottom
-4. Fill in the name, description and click on 'script', put in anything for the redirect uri, its not needed and you can change it later if you want to
-5. Copy down the 'secret' that is your api_secret, the 14 character string by the name of your app is your app_id
-6. Use these values and your credentials to configure the library
 
 
 ## Coming Soon
