@@ -15,7 +15,7 @@ module.exports = function (snooper_options) {
                 if (event == item_type) {
                     this._concurrent_item_emitter(start_page, 0, "")
                 } else {
-                    console.log("whats this")
+                    //console.log("whats this")
                 }
             })
 
@@ -44,8 +44,8 @@ module.exports = function (snooper_options) {
                     var body = JSON.parse(body_json)
                 } catch (err) {
                     saved_this.emit("error", "could not parse input")
-                    console.log('body_json ' + body_json)
-                    console.log('err ' + err)
+                    //console.log('body_json ' + body_json)
+                    //console.log('err ' + err)
                     return
                 }
                 var children = body.data.children

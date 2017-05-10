@@ -53,7 +53,7 @@ module.exports = function (snooper_options) {
                     self.last_request = Date.now()
                 } else {
                     let wait_time = self.ms_between_requests - time_diff
-                    console.log("wait time " + wait_time)
+                    //console.log("wait time " + wait_time)
                     setTimeout(api_request, wait_time)
 
                     self.last_request = Date.now() + wait_time
@@ -103,7 +103,7 @@ module.exports = function (snooper_options) {
                     request(request_options, function (err, res, body_json) {
                         // console.log(res)
                         if (err) {
-                            console.log(err)
+                            //console.log(err)
                             cb(err)
                         }
 
@@ -115,7 +115,7 @@ module.exports = function (snooper_options) {
                         let ratelimit_remaining = res.headers["x-ratelimit-remaining"] // remaining requests in period
                         let ratelimit_reset = res.headers["x-ratelimit-reset"] // time until end of period
 
-                        console.log("ratelimit remaining:" + ratelimit_remaining + " reset:" + ratelimit_reset + " used:" + ratelimit_used)
+                        //console.log("ratelimit remaining:" + ratelimit_remaining + " reset:" + ratelimit_reset + " used:" + ratelimit_used)
 
                         let status_class = Math.floor(res.statusCode / 100)
 
@@ -128,7 +128,7 @@ module.exports = function (snooper_options) {
                                 // well is it a success...
                                 if (body && body.json && body.json.ratelimit) {
                                     if (snooper_options.automatic_retries) {
-                                        console.log('retrying in ' + body.json.ratelimit *1000)
+                                        //console.log('retrying in ' + body.json.ratelimit *1000)
                                         self.schedule_request(function(){
                                             self.generic_api_call(endpoint, method, data, retries_left, cb)
                                         }, false, body.json.ratelimit *1000)
@@ -149,7 +149,7 @@ module.exports = function (snooper_options) {
                                 break
 
                             case 5: // server error (retryable)
-                                console.log("encountered retryable error")
+                                //console.log("encountered retryable error")
                                 if (retries_left > 0) {
                                     self.schedule_request(function () {
                                         self.generic_api_call(endpoint, method, data, retries_left - 1, cb)
