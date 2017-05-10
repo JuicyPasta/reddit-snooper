@@ -28,36 +28,46 @@ var Snooper = require('reddit-snooper')
 
 #### unexpected factorial bot
 ``` js
-var commentWatcher = snooper.watcher.getCommentWatcher('all')
-    .on('comment', function(comment) {
-        let match = comment.data.body.match('[0-9]+!')
-        if (match) {
-            snooper.api.post('/api/comment', {
-                api_type:'json',
-                text: match[0] + " = " + factorial(+match[0].substring(0, match.length-1)),
-                thing_id: comment.data.name,
-            }, function(err, statusCode, data) {
-                if (!err) console.log("just replied to" + comment.data.author)
-            })
-        }
-    })
-    .on('error', console.err)
+snooper.watcher.getCommentWatcher("all")
+.on("comment", function (comment) {
+
+    // only reply if the comment contains a factorial
+    let match = comment.data.body.match("[0-9]+!")
+    if (match) {
+
+        // post a reply, if you have automatic_retries set to true this comment will make
+        // it through even if it takes 10+ minutes ('you are doing this too much!') otherwise
+        // an error will be thrown
+        snooper.api.post("/api/comment", {
+            api_type: "json",
+            text:     match[0] + " = " + factorial(+match[0].substring(0, match[0].length -1)),
+            thing_id: comment.data.name
+        }, function (err, statusCode, data) {
+            if (!err) console.log('just replied to comment: ' + comment.data.name)
+        })
+    }
+})
+.on("error", console.error)
 
 // when you are done 
 commentWatcher.close()
 ```
 
-#### download all gifs from r/gifs with over 100 upvotes
+#### download all pics that are posted to r/pics
 ``` js
-var postWatcher = snooper.getPostWatcher('gifs')
-    .on('post', function(post) {
-        // post is a text post with over 100 upvotes 
-        if (post.kind == 't3' && post.data.ups > 100) {
-            // download from data.preview.images.source
-        }
+// start watching for new posts to r/pics
+snooper.watcher.getPostWatcher('pics')
+.on('post', function(post) { // post will be a json object containing all post information
 
-    })
-    .on('error', console.err)
+    // check if its a link post (t3, definitions found on reddit api page)
+    // also make sure there is an image link
+    let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
+    if (post.kind === 't3' && urlmatch) {
+        request(post.data.url).pipe(fs.createWriteStream("gifs/"+post.data.title+urlmatch[0]))
+    }
+
+})
+.on('error', console.error)
 ```
 
 

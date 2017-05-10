@@ -127,7 +127,14 @@ module.exports = function (snooper_options) {
                             case 2: // success
                                 // well is it a success...
                                 if (body && body.json && body.json.ratelimit) {
-                                    cb("you are doing this too much, try again in: " + body.json.ratelimit + " seconds", res.statusCode, body)
+                                    if (snooper_options.automatic_retries) {
+                                        console.log('retrying in ' + body.json.ratelimit *1000)
+                                        self.schedule_request(function(){
+                                            self.generic_api_call(endpoint, method, data, retries_left, cb)
+                                        }, false, body.json.ratelimit *1000)
+                                    } else {
+                                        cb("you are doing this too much, try again in: " + body.json.ratelimit + " seconds", res.statusCode, body)
+                                    }
                                 } else {
                                     cb(null, res.statusCode, body)
                                 }
