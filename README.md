@@ -1,6 +1,6 @@
 # snooper [![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/Snooper)
 
-Reddit bot framework that allows you to easily create high performance reddit bots with nodejs. 
+Reddit bot framework that allows you to easily create high performance Reddit bots with nodejs. 
 
 ## Installing snooper
 ``` bash
@@ -17,7 +17,10 @@ var Snooper = require('reddit-snooper')
             password: 'reddit password',
             app_id: 'reddit api app id',
             api_secret: 'reddit api secret',
-            user_agent: 'OPTIONAL user agent for your bot'
+            user_agent: 'OPTIONAL user agent for your bot',
+
+            automatic_retries: true, // automatically handles condition when reddit says 'you are doing this too much'
+            api_requests_per_minuite: 60 // api requests will be spread out in order to play nicely with Reddit
         })
 ```
 
@@ -60,9 +63,9 @@ var postWatcher = snooper.getPostWatcher('gifs')
 
 ## Reddit API
 
-Snooper by default handles retries, rate limit throttling conditions and Reddit's different response codes. 
+Snoopers api component at the moment is an agnostic wrapper around reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
 
-Keep in mind that new accounts get little to no posting privelages (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account. 
+Keep in mind that new accounts get little to no posting privileges (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account. 
 
 [Reddit API Documentation](https://www.reddit.com/dev/api/)
 
@@ -80,7 +83,7 @@ snooper.api.patch('/api/v1/me/prefs/', {
 
 })
 
-// activate turbo mode which doubles performance       (kidding)
+// activate turbo mode doubling performance       (kidding)
 snooper.api.post('api/v1/gold/give', {
     months: 1,
     username: 'juicypasta'
@@ -91,7 +94,6 @@ snooper.api.post('api/v1/gold/give', {
 ```
 
 ## API setup 
-
 All you need to do to get up and running is obtain an api_id and an api_secret. Both can be obtained from [Reddit app console](https://reddit.com/prefs/apps)
 1. Create (or log into) a reddit account
 2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
@@ -103,3 +105,10 @@ All you need to do to get up and running is obtain an api_id and an api_secret. 
 
 ## Coming Soon
 - Support for multiple accounts
+- Convenience methods for commonly used api requests
+- Object model for api items (User, Subreddit, Post, Comment, etc.)
+- Watchers for **everything**
+    - private messages
+    - replies
+    - new post reaching the front page (configurable to different pages/ # of pages)
+

@@ -1,19 +1,19 @@
-'use strict'
+"use strict"
 
-const EventEmitter = require('events').EventEmitter;
-const should = require('should');
+const EventEmitter = require("events").EventEmitter
+const should = require("should")
 
-const credentials = require('../secrets/reddit-credentials')
-const Snooper = require('../reddit-snooper')
+const credentials = require("../secrets/reddit-credentials")
+const Snooper = require("../reddit-snooper")
 const snooper = Snooper(credentials)
 
-describe("Api Basic Operations", function() {
-    it("makes a get request", function(done) {
+describe("Api Basic Operations", function () {
+    it("makes a get request", function (done) {
         this.skip()
-        snooper.api.get('subreddits/mine/subscriber', {
-            limit: 2,
+        snooper.api.get("subreddits/mine/subscriber", {
+            limit: 2
 
-        }, function(err, responseCode, data) {
+        }, function (err, responseCode, data) {
             responseCode.should.be.equal(200)
             should(err).not.be.ok()
             data.data.children.length.should.be.equal(2)
@@ -22,17 +22,17 @@ describe("Api Basic Operations", function() {
 
     })
 
-    it("makes a post request", function(done) {
+    it("makes a post request", function (done) {
         this.skip()
 
-        snooper.api.post('api/friend', {
-            api_type: 'json',
-            name: 'juicypasta',
-            note: 'hi frriendd',
-            type: 'friend',
+        snooper.api.post("api/friend", {
+            api_type: "json",
+            name:     "juicypasta",
+            note:     "hi frriendd",
+            type:     "friend",
             duration: 500
 
-        }, function(err, responseCode, data) {
+        }, function (err, responseCode, data) {
             responseCode.should.be.equal(200)
             done()
 
@@ -40,14 +40,14 @@ describe("Api Basic Operations", function() {
 
     }).timeout(10000)
 
-    it ("replies to a comment", function(done) {
+    it("replies to a comment", function (done) {
         this.skip()
 
-        snooper.api.post('api/comment', {
-            api_type:'json',
-            text: 'another_test',
-            thing_id: 't1_dhavp8p',
-        }, function(err, statusCode, data) {
+        snooper.api.post("api/comment", {
+            api_type: "json",
+            text:     "another_test",
+            thing_id: "t1_dhavp8p"
+        }, function (err, statusCode, data) {
             statusCode.should.be.equal(200)
             should(err).not.be.ok()
             data.json.errors.should.be.equal([])
@@ -56,13 +56,13 @@ describe("Api Basic Operations", function() {
         })
     }).timeout(2000)
 
-    it("makes a put request", function(done) {
+    it("makes a put request", function (done) {
         this.skip()
-        snooper.api.put('api/v1/me/friends', {
-            name: 'juicypasta',
-            note: 'hi frriendd',
+        snooper.api.put("api/v1/me/friends", {
+            name: "juicypasta",
+            note: "hi frriendd"
 
-        }, function(err, responseCode, data) {
+        }, function (err, responseCode, data) {
             console.log("err " + err)
             console.log(data)
             console.log(resposneCode)
@@ -73,11 +73,11 @@ describe("Api Basic Operations", function() {
 
     })
 
-    it("makes a patch request", function(done) {
+    it("makes a patch request", function (done) {
         this.skip()
-        snooper.api.patch('/api/v1/me/prefs/', {
-            'over_18': false
-        }, function(err, statusCode, data) {
+        snooper.api.patch("/api/v1/me/prefs/", {
+            "over_18": false
+        }, function (err, statusCode, data) {
             should(err).not.be.ok()
             data.over_18.should.be.equal(false)
             statusCode.should.be.equal(200)
@@ -85,12 +85,12 @@ describe("Api Basic Operations", function() {
         })
     }).timeout(5000)
 
-    it("ratelimits", function(done) {
+    it("ratelimits", function (done) {
         for (let i = 0; i < 600; i++) {
 
-            snooper.api.get('subreddits/mine/subscriber', {
-                limit: 2,
-            }, function(err, responseCode, data) {
+            snooper.api.get("subreddits/mine/subscriber", {
+                limit: 2
+            }, function (err, responseCode, data) {
                 console.log(data)
                 responseCode.should.be.equal(200)
                 should(err).not.be.ok()
