@@ -1,5 +1,7 @@
 # snooper [![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/Snooper)
 
+[![Join the chat at https://gitter.im/reddit-snooper-nodjs/Lobby](https://badges.gitter.im/reddit-snooper-nodjs/Lobby.svg)](https://gitter.im/reddit-snooper-nodjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Reddit bot framework that allows you to easily create high performance Reddit bots with nodejs. 
 
 ## Installing snooper
