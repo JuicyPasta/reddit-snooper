@@ -8,8 +8,8 @@
 
 ## Table of Contents
 - [Setup and Configuration](#setup-and-configuration)
-- [Watcher](#reddit-watcher-(snooper.watcher))
-- [Api](#reddit-api-(snooper.api))
+- [Watcher](#reddit-watcher-snooperwatcher)
+- [Api](#reddit-api-snooperapi)
 
 ## Setup and Configuration
 ### Installing reddit-snooper
