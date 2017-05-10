@@ -1,6 +1,6 @@
 {
   "name": "reddit-snooper",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Simple Reddit bot framework for nodejs",
   "main": "",
   "dependencies": {
