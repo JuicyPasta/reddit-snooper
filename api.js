@@ -7,13 +7,11 @@ module.exports = function(snooper_options) {
 
 class ApiWrapper {
     constructor(snooper_options) {
-        this.period_time = 60
-        this.requests_per_period = 60
-
-        this.requests_left = this.requests_per_period
+        this.requests_per_minuite = 60
+        this.ms_between_requests = (1000*60) / this.requests_per_minuite
+        this.last_request = 0
         this.request_queue = []
 
-        this.pipeline_running = false
     }
 
     // Retrieve OAUTH Token (tokens work for 1 hour each)
@@ -43,40 +41,21 @@ class ApiWrapper {
         })
     }
 
-    start_request_pipeline() {
-        let self = this
-        setTimeout(function() {
-            self.requests_left = self.requests_per_period
-            // use things left in the queue
-            // TODO: space out the requests here
-            while (self.requests_left > 0 && self.request_queue.length > 0) {
-                // pop 60 off the stack 
-                self.request_queue.shift()()
-            }
-            self.start_request_pipeline()
-        }, self.period_time)
-    }
-
-    // executes requests at a rate that does not exceed reddit's rate limits
+    // ratelimit requests
     schedule_request(api_request, high_priority) {
         let self = this
 
-        if (!this.pipeline_running)
-            self.start_request_pipeline()
-
-        if (this.requests_left > 0) {
-            console.log(this.requests_left + ' executing')
-            // execute request
+        let time_diff = Date.now() - this.last_request
+        if (time_diff >= self.ms_between_requests) {
             api_request()
-
-            this.requests_left -= 1
+            self.last_request = Date.now()
         } else {
-            console.log(this.requests_left + ' waiting')
-            if (high_priority) {
-                self.request_queue.unshift(api_request)
-            } else {
-                self.request_queue.push(api_request)
-            }
+            let wait_time = self.ms_between_requests - time_diff
+            console.log('wait time ' + wait_time)
+            setTimeout(api_request, wait_time)
+
+            self.last_request = Date.now() + wait_time
+
         }
     }
 
