@@ -136,6 +136,8 @@ module.exports = function (snooper_options) {
                         }
                     }
 
+                    console.log("NEW DATA: " + new_data)
+
                     self.start()
                 })
             }, self.wait_interval)

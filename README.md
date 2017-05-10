@@ -35,13 +35,13 @@ var Snooper = require('reddit-snooper')
 ```
 
 ### API setup 
-All you need to do to get up and running is obtain an api_id and an api_secret. Both can be obtained from [Reddit app console](https://reddit.com/prefs/apps)
+All you need to get up and running is obtain an api_id and an api_secret. Both can be created on the [Reddit app console](https://reddit.com/prefs/apps)
 1. Create (or log into) a reddit account
 2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
 3. Select 'create another app...' at the bottom
 4. Fill in the name, description and click on 'script', put in anything for the redirect uri, its not needed and you can change it later if you want to
 5. Copy down the 'secret' that is your api_secret, the 14 character string by the name of your app is your app_id
-6. Use these values and your credentials to configure the library
+6. Use these values and your credentials to configure the snooper
 
 
 ## Reddit Watcher (snooper.watcher)

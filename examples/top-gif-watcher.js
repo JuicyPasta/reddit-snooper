@@ -17,14 +17,13 @@ const Snooper = require("../reddit-snooper"),
  *  })
  */
 
-// start watching for new posts to r/pics
-snooper.watcher.getListingWatcher('all', {
-    listing: 'rising',
-    limit: 5
+// notify when things reach the front 101 posts of gifs
+snooper.watcher.getListingWatcher('gifs', {
+    listing: 'top_day',
+    limit: 101
 })
 .on('item', function(post) { // post will be a json object containing all post information
     console.log(post.data.name)
-
 
 })
 .on('error', console.error)
