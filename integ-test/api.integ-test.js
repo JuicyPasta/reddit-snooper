@@ -86,6 +86,7 @@ describe("Api Basic Operations", function () {
     }).timeout(5000)
 
     it("ratelimits", function (done) {
+        this.skip()
         for (let i = 0; i < 600; i++) {
 
             snooper.api.get("subreddits/mine/subscriber", {

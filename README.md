@@ -1,8 +1,8 @@
-# Reddit-Snooper - Simplified Reddit bot framework for nodejs
+# Reddit-Snooper - Simplified Reddit bot framework for Nodejs
 
 [![npm package](https://nodei.co/npm/reddit-snooper.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/reddit-snooper/)
 
-[![Build Status](https://travis-ci.org/JuicyPasta/snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/snooper)
+[![Build Status](https://travis-ci.org/JuicyPasta/reddit-snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/reddit-snooper)
 [![dependencies Status](https://david-dm.org/JuicyPasta/reddit-snooper/status.svg)](https://david-dm.org/JuicyPasta/reddit-snooper)
 [![Gitter](https://badges.gitter.im/reddit-snooper-nodjs/Lobby.svg)](https://gitter.im/reddit-snooper-nodjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
@@ -113,9 +113,16 @@ snooper.watcher.getPostWatcher('pics')
 
 Snoopers api component at the moment is an agnostic wrapper around reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
 
-Keep in mind that new accounts get little to no posting privileges (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account. 
+In order to use the api head over to the [Reddit API Documentation](https://www.reddit.com/dev/api/). All of the api methods use one of the 5 HTTP methods (GET, POST, PATCH, PUT, DELETE) which map to the 5 different snooper.api methods. 
 
-[Reddit API Documentation](https://www.reddit.com/dev/api/)
+- snooper.get(endpoint, data, (err, responseCode, responseData) -> {})
+- snooper.post
+- snooper.patch
+- snooper.put
+- snooper.delete
+
+*Note: new accounts get little to no posting privileges (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account.*
+
 
 #### basic api usage
 ``` js
