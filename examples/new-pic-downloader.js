@@ -25,7 +25,7 @@ snooper.watcher.getPostWatcher('pics')
     // also make sure there is an image link
     let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
     if (post.kind === 't3' && urlmatch) {
-        request(post.data.url).pipe(fs.createWriteStream("gifs/"+post.data.title+urlmatch[0]))
+        request(post.data.url).pipe(fs.createWriteStream("pics/"+post.data.title+urlmatch[0]))
     }
 
 })

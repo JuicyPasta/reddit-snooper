@@ -17,13 +17,17 @@ const Snooper = require("../reddit-snooper"),
  *  })
  */
 
-// notify when things reach the front 101 posts of gifs
+// notify when things reach the front 2 pages of r/gifs that have not been stickied
 snooper.watcher.getListingWatcher('gifs', {
     listing: 'top_day',
-    limit: 101
+    limit: 50 // 2 pages
 })
 .on('item', function(post) { // post will be a json object containing all post information
-    console.log(post.data.name)
+    // ONLY NON STICKIED POSTS
+    let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
+    if (!post.data.stickied && post.kind === 't3') {
+       request(post.data.url).pipe(fs.createWriteStream("./gifs/"+post.data.title.split('\"').join('')+urlmatch[0]))
+    }
 
 })
 .on('error', console.error)

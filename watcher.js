@@ -43,8 +43,10 @@ module.exports = function (snooper_options) {
         _get_items(start_page, after_name, posts_needed, until_name, items, cb_first_item, cb) {
             let self = this
 
-            if (self.is_closed)
+            if (self.is_closed) {
+                console.log("AHETR")
                 return
+            }
 
             request({
                 url: start_page,
@@ -67,7 +69,7 @@ module.exports = function (snooper_options) {
                     let is_done = false
 
                     // stop if posts_needed is reached
-                    if (posts_needed && children.length > posts_needed) {
+                    if (posts_needed!== null && children.length >= posts_needed) {
                         children = children.slice(0, posts_needed)
                         is_done = true
                     }
@@ -84,11 +86,14 @@ module.exports = function (snooper_options) {
                     }
 
                     // this makes it so feeds dont receive current data
-                    if (!until_name && !posts_needed) return
+                    if (!until_name && !posts_needed && posts_needed !== 0){
+                        console.log("HERE")
+                        return
+                    }
 
                     items = items.concat(children)
 
-                    if (!is_done)
+                    if (!is_done) {
                         self._get_items(
                             start_page,
                             children[children.length - 1].data.name,
@@ -97,9 +102,12 @@ module.exports = function (snooper_options) {
                             items,
                             cb_first_item,
                             cb)
-                    else
+                    } else {
                         cb(null, items)
+                    }
 
+                } else {
+                    cb('Requested too many items (reddit does not keep this large of a listing)', items)
                 }
             })
         }
@@ -121,6 +129,8 @@ module.exports = function (snooper_options) {
 
             setTimeout(function() {
                 self.get_items(self.start_page, '', self.limit, '', null, function(err, data) {
+                    if (err) return self.emit('error', err)
+
                     let new_data = 0
 
                     for (let i = 0; i < data.length; i++) {
@@ -135,8 +145,6 @@ module.exports = function (snooper_options) {
                                 self.seen_items.shift()
                         }
                     }
-
-                    console.log("NEW DATA: " + new_data)
 
                     self.start()
                 })
@@ -200,7 +208,7 @@ module.exports = function (snooper_options) {
 
                     for (var i = 0; i < children.length; i++) {
                         // found the comment we are looking up to
-                        if (children[i].data.name == until_name) {
+                        if (children[i].data.name === until_name) {
                             // we only care about the comments before and we are done looking
                             children = children.slice(0, i)
                             is_done = true
@@ -259,7 +267,8 @@ module.exports = function (snooper_options) {
     // listings: hot, rising, controversial, top_day, top_hour, top_week, top_month, top_year, top_all
     function getListingWatcher(subreddit, options) {
         options.listing = options.listing || 'hot'
-        let start_page = 'https://reddit.com/'
+        subreddit = subreddit ? 'r/' + subreddit : ''
+        let start_page = 'https://reddit.com/' + subreddit + '/'
         if (options.listing === 'hot' || options.listing === 'rising' || options.listing === 'controversial') {
             start_page += options.listing + '.json'
         } else if (options.listing === 'top_day' || options.listing === 'top_hour' || options.listing === 'top_month'

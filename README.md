@@ -45,12 +45,20 @@ All you need to get up and running is obtain an api_id and an api_secret. Both c
 
 
 ## Reddit Watcher (snooper.watcher)
-Reddit watchers are event emitters that trigger when new things happen on the website
+Reddit watchers are event emitters that trigger when new things happen on the website,
 Right now you can watch for:
 - new comments across the website or on a specific subreddit
 - new posts across the website or on a specific subreddit
 - new posts reaching the first x pages of different listings (hot, top_24, top_day, controversial, rising) across the website or subreddit
 
+There are 4 types of watchers: 
+1. snooper.watcher.getCommentWatcher(subreddit or 'all') // emits events when a comment is posted
+2. snooper.watcher.getPostWatcher(subreddit or 'all') // emits an event when a post is made
+3. snooper.watcher.getGildedWatcher(subreddit or 'all') // emits an event as soon as something gets gilded
+3. snooper.watcher.getListingWatcher(subreddit or 'all', options) // watches a listing and emits an event if something changes (a new post reaches the front page)
+    - options: object
+        - listing: 'hot', 'rising', 'controversial', 'top_day', 'top_hour', 'top_month', 'top_year', 'top_all'
+        - limit: how many of the top posts you want to watch, if any of these spots get overtaken by a new post an event will be emitted
 
 ### examples (full programs in the examples folder)
 #### unexpected factorial bot
@@ -80,14 +88,29 @@ snooper.watcher.getCommentWatcher("all")
 // commentWatcher.close()
 ```
 
-#### download all gifs that make it to the front 2 pages of hot on r/gifs
-``` js
-
-// NOTICE THIS IS DIFFERENT THAT JUST DOWNLOADING THE FIRST 2 PAGES
-
-```
 #### repost all gilded comments with over 1000 ups to r/bestof (please dont do this)
 ``` js
+
+#snooper.watcher.getGilded('
+
+```
+
+#### download all gifs that make it to the front 2 pages of hot on r/gifs
+``` js
+// NOTICE THIS IS DIFFERENT THAT JUST DOWNLOADING THE FIRST 2 PAGES
+
+snooper.watcher.getListingWatcher('gifs', {
+    listing: 'top_day',
+    limit: 4 // 2 pages
+})
+.on('item', function(post) { // post will be a json object containing all post information
+    // ONLY NON STICKIED POSTS
+    let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
+    if (!post.data.stickied && post.kind === 't3') {
+       request(post.data.url).pipe(fs.createWriteStream("./gifs/"+post.data.title.split('\"').join('')+urlmatch[0]))
+    }
+
+})
 
 ```
 
@@ -111,20 +134,37 @@ snooper.watcher.getPostWatcher('pics')
 
 ## Reddit API (snooper.api)
 
-Snoopers api component at the moment is an agnostic wrapper around reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
+Snooper's api component is an agnostic wrapper around Reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
 
 In order to use the api head over to the [Reddit API Documentation](https://www.reddit.com/dev/api/). All of the api methods use one of the 5 HTTP methods (GET, POST, PATCH, PUT, DELETE) which map to the 5 different snooper.api methods. 
 
-- snooper.get(endpoint, data, (err, responseCode, responseData) -> {})
-- snooper.post
-- snooper.patch
-- snooper.put
-- snooper.delete
+``` js
+// endpoint: api endpoint ex: 'api/v1/me' or '/api/v1/me/karma/' (listed on api documentation)
+// data: JSON data, dependent on the request which is specified in the docs
+// NOTE: the function .get is used for api calls that use HTTP GET, you can find the method each api endpiont uses on (you guessed it) the reddit api docs
+
+snooper.api.get(endpoint, data, function(err, responseCode, responseData) {
+        err // any errors that occurred in the api request
+        responseCode // http status code of the api request
+        responseData // json data of the api response
+    })
+    
+snooper.api.post(same as get)
+snooper.api.patch(same as get)
+snooper.api.put(same as get)
+snooper.api.delete(same as get)
+
+// gets an api token 
+snooper.api.get_token(function(err, token) {
+    console.log(token)
+})
+
+```
 
 *Note: new accounts get little to no posting privileges (1 comment or post per 5 minutes or more) if you dont have any karma. If you just want to play around with the api I recommend using an active account.*
 
 
-#### basic api usage
+### basic api usage
 ``` js
 // check how much karma your bot has
 snooper.api.get('api/v1/me/karma', {}, function(err, statusCode, data) {
@@ -147,6 +187,45 @@ snooper.api.post('api/v1/gold/give', {
 })
 
 ```
+
+### Debugging 
+**DISCLAIMER:** I have not tested every single endpoint so there is a chance that something might not work, if this happens you can open up an issue(/ message me), or send the request manually using a token from get_token method.
+
+If you choose latter option I recommend using something like postman to verify you are sending the request correctly. After you know how the endpoint works, you can use the get_token method to send your own request, just remember to put the token in the 'Authentication' header. 
+
+#### sending a request 'manually' using the [request](https://www.npmjs.com/package/request) library
+``` js
+snooper.api.get_token(function (err, token) {
+    //console.log(token)
+    if (err) console.error(err)
+    
+    let request_options = {
+        url:     endpoint, // put the desired endpoint here
+        method:  method, // HTTP method ("GET", "POST", "PATCH"...
+        headers: {
+            "Authorization": token,
+            "User-Agent":    "Snooper/1.0"
+        }
+    }
+
+    request({
+        url:     endpoint, // put the desired endpoint here
+        method:  method, // HTTP method ("GET", "POST", "PATCH"...
+        headers: {
+            "Authorization": token,
+            "User-Agent":    "Snooper/1.0"
+        },
+        data: { // !!! this might be called data, body, or qs depending on the request type, check the request documentation
+            key: value,
+            ...
+            
+        }
+    }, function (err, res, body_json) {
+        http response
+    }
+```
+
+
 
 
 ## Coming Soon
