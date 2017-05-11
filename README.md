@@ -91,7 +91,11 @@ snooper.watcher.getCommentWatcher("all")
 #### repost all gilded comments with over 1000 ups to r/bestof (please dont do this)
 ``` js
 
-#snooper.watcher.getGilded('
+snooper.watcher.getGilded('all')
+.on('item', function(err, data) {
+    
+... coming soon
+})
 
 ```
 
@@ -154,6 +158,7 @@ snooper.api.patch(same as get)
 snooper.api.put(same as get)
 snooper.api.delete(same as get)
 
+
 // gets an api token 
 snooper.api.get_token(function(err, token) {
     console.log(token)
@@ -198,15 +203,6 @@ If you choose latter option I recommend using something like postman to verify y
 snooper.api.get_token(function (err, token) {
     //console.log(token)
     if (err) console.error(err)
-    
-    let request_options = {
-        url:     endpoint, // put the desired endpoint here
-        method:  method, // HTTP method ("GET", "POST", "PATCH"...
-        headers: {
-            "Authorization": token,
-            "User-Agent":    "Snooper/1.0"
-        }
-    }
 
     request({
         url:     endpoint, // put the desired endpoint here
