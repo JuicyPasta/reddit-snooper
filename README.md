@@ -1,4 +1,4 @@
-# Reddit-Snooper - Simplified Reddit bot framework for Nodejs
+# Reddit-Snooper - Reddit bot framework for Nodejs
 
 [![npm package](https://nodei.co/npm/reddit-snooper.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/reddit-snooper/)
 

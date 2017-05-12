@@ -26,17 +26,22 @@ snooper.watcher.getCommentWatcher("all")
     // only reply if the comment contains a factorial
     let match = comment.data.body.match("[0-9]+!")
     if (match) {
+        console.log(comment.data.author  + " posted " + comment.data.body)
 
         // post a reply, if you have automatic_retries set to true this comment will make
         // it through even if it takes 10+ minutes ('you are doing this too much!') otherwise
         // an error will be thrown
+
+        /*
         snooper.api.post("/api/comment", {
             api_type: "json",
             text:     match[0] + " = " + factorial(+match[0].substring(0, match[0].length -1)),
             thing_id: comment.data.name
         }, function (err, statusCode, data) {
             if (!err) console.log('just replied to comment: ' + comment.data.name)
+            console.log(data)
         })
+        */
     }
 })
 .on("error", console.error)

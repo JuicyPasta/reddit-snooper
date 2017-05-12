@@ -29,7 +29,7 @@ module.exports = function (snooper_options) {
                 headers: {
                     "User-Agent": snooper_options.user_agent
                 }
-            }, function (err, res, body) {
+            }, (err, res, body) => {
                 if (err) {
                     cb(err, null)
                 }
@@ -45,23 +45,21 @@ module.exports = function (snooper_options) {
                 // TODO: fix case where lots of these could go off at once breaking the rate limit
                 setTimeout(api_request, desired_wait_time_ms)
             } else {
-                let self = this
-
                 let time_diff = Date.now() - this.last_request
-                if (time_diff >= self.ms_between_requests) {
+                if (time_diff >= this.ms_between_requests) {
                     api_request()
-                    self.last_request = Date.now()
+                    this.last_request = Date.now()
                 } else {
-                    let wait_time = self.ms_between_requests - time_diff
+                    let wait_time = this.ms_between_requests - time_diff
                     //console.log("wait time " + wait_time)
                     setTimeout(api_request, wait_time)
 
-                    self.last_request = Date.now() + wait_time
+                    this.last_request = Date.now() + wait_time
                 }
             }
         }
 
-        construct_url(path) {
+        static construct_url(path) {
             let default_endpoint = "https://www.reddit.com/"
             let oauth_endpoint = "https://oauth.reddit.com/"
 
@@ -74,10 +72,9 @@ module.exports = function (snooper_options) {
         }
 
         generic_api_call(endpoint, method, data, retries_left, cb) {
-            let self = this
-            self.schedule_request(function () {
+            this.schedule_request(() => {
 
-                self.get_token(function (err, token) {
+                this.get_token((err, token) => {
                     //console.log(token)
                     if (err) {
                         cb(err)
@@ -100,7 +97,7 @@ module.exports = function (snooper_options) {
                         request_options.form = data
                     }
 
-                    request(request_options, function (err, res, body_json) {
+                    request(request_options, (err, res, body_json) => {
                         // console.log(res)
                         if (err) {
                             //console.log(err)
@@ -108,7 +105,7 @@ module.exports = function (snooper_options) {
                         }
 
                         // dont parse if its already an object
-                        let body = (typeof body_json == "string") ? JSON.parse(body_json) : body_json
+                        let body = (typeof body_json === "string") ? JSON.parse(body_json) : body_json
 
                         // rate limit info - oauth2 clients get 60 requests / minuite
                         let ratelimit_used = res.headers["x-ratelimit-used"] // used during period
@@ -129,8 +126,8 @@ module.exports = function (snooper_options) {
                                 if (body && body.json && body.json.ratelimit) {
                                     if (snooper_options.automatic_retries) {
                                         //console.log('retrying in ' + body.json.ratelimit *1000)
-                                        self.schedule_request(function(){
-                                            self.generic_api_call(endpoint, method, data, retries_left, cb)
+                                        this.schedule_request(() => {
+                                            this.generic_api_call(endpoint, method, data, retries_left, cb)
                                         }, false, body.json.ratelimit *1000)
                                     } else {
                                         cb("you are doing this too much, try again in: " + body.json.ratelimit + " seconds", res.statusCode, body)
@@ -151,8 +148,8 @@ module.exports = function (snooper_options) {
                             case 5: // server error (retryable)
                                 //console.log("encountered retryable error")
                                 if (retries_left > 0) {
-                                    self.schedule_request(function () {
-                                        self.generic_api_call(endpoint, method, data, retries_left - 1, cb)
+                                    this.schedule_request(() => {
+                                        this.generic_api_call(endpoint, method, data, retries_left - 1, cb)
                                     })
                                 } else {
                                     cb(null, res.statusCode, body)

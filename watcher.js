@@ -1,6 +1,6 @@
 "use strict"
 
-var request = require("request")
+const request = require("request")
 const EventEmitter = require("events")
 
 module.exports = function (snooper_options) {
@@ -10,17 +10,16 @@ module.exports = function (snooper_options) {
         constructor(start_page, item_type, options) {
             super()
 
-            let self = this
-            self.item_type = item_type
-            self.options = options
-            self.start_page = start_page
-            self.is_closed = false
+            this.item_type = item_type
+            this.options = options
+            this.start_page = start_page
+            this.is_closed = false
 
-            this.once("newListener", function (event, listener) {
-                if (event === self.item_type) {
-                    self.start()
+            this.once("newListener", (event, listener) => {
+                if (event === this.item_type) {
+                    this.start()
                 } else {
-                    throw "event type not recognized, use a valid event type like: error or " + self.item_type
+                    throw "event type not recognized, use a valid event type like: error or " + this.item_type
                 }
             })
         }
@@ -41,9 +40,7 @@ module.exports = function (snooper_options) {
         // calls the callback with a list of items
         // stop when we reach until_need or we get all posts_needed (whichever comes first)
         _get_items(start_page, after_name, posts_needed, until_name, items, cb_first_item, cb) {
-            let self = this
-
-            if (self.is_closed) {
+            if (this.is_closed) {
                 console.log("AHETR")
                 return
             }
@@ -51,7 +48,7 @@ module.exports = function (snooper_options) {
             request({
                 url: start_page,
                 qs:  {after: after_name}
-            }, function (err, res, body_json) {
+            }, (err, res, body_json) => {
                 if (err) return cb(err, items)
                 let body
                 try {
@@ -94,7 +91,7 @@ module.exports = function (snooper_options) {
                     items = items.concat(children)
 
                     if (!is_done) {
-                        self._get_items(
+                        this._get_items(
                             start_page,
                             children[children.length - 1].data.name,
                             posts_needed ? posts_needed - children.length : posts_needed, // leave it null
@@ -117,38 +114,34 @@ module.exports = function (snooper_options) {
         constructor(start_page, item_type, options) {
             super(start_page, item_type, options)
 
-            let self = this
-
-            self.limit = options.limit || 25
-            self.seen_items = []
-            self.seen_items_size = self.limit * 5
+            this.limit = options.limit || 25
+            this.seen_items = []
+            this.seen_items_size = this.limit * 5
         }
 
         start() {
-            let self = this
-
-            setTimeout(function() {
-                self.get_items(self.start_page, '', self.limit, '', null, function(err, data) {
-                    if (err) return self.emit('error', err)
+            setTimeout(() => {
+                this.get_items(this.start_page, '', this.limit, '', null, (err, data) => {
+                    if (err) return this.emit('error', err)
 
                     let new_data = 0
 
                     for (let i = 0; i < data.length; i++) {
-                        if (self.seen_items.indexOf(data[i].data.name) < 0) {
+                        if (this.seen_items.indexOf(data[i].data.name) < 0) {
                             new_data++
 
-                            self.emit(self.item_type, data[i])
+                            this.emit(this.item_type, data[i])
 
-                            self.seen_items.push(data[i].data.name)
+                            this.seen_items.push(data[i].data.name)
 
-                            if (self.seen_items.length > self.seen_items_size)
-                                self.seen_items.shift()
+                            if (this.seen_items.length > this.seen_items_size)
+                                this.seen_items.shift()
                         }
                     }
 
-                    self.start()
+                    this.start()
                 })
-            }, self.wait_interval)
+            }, this.wait_interval)
         }
     }
 
@@ -159,7 +152,7 @@ module.exports = function (snooper_options) {
             this.is_closed = false
 
             this.item_type = item_type
-            this.once("newListener", function (event, listener) {
+            this.once("newListener", (event, listener) => {
                 if (event === item_type) {
                     this._concurrent_item_emitter(start_page, 0, "")
                 } else {
@@ -181,21 +174,22 @@ module.exports = function (snooper_options) {
             request({
                 url: start_page,
                 qs:  {after: after_name}
-            }, function (err, res, body_json) {
+            }, (err, res, body_json) => {
                 if (err) {
                     saved_this.emit("error", err)
                     return
                 }
 
+                let body
                 try {
-                    var body = JSON.parse(body_json)
+                    body = JSON.parse(body_json)
                 } catch (err) {
                     saved_this.emit("error", "could not parse input")
                     //console.log('body_json ' + body_json)
                     //console.log('err ' + err)
                     return
                 }
-                var children = body.data.children
+                let children = body.data.children
 
                 if (children.length > 0) {
                     if (!after_name) {
@@ -206,7 +200,7 @@ module.exports = function (snooper_options) {
                     after_name = children[children.length - 1].data.name
                     let is_done = false
 
-                    for (var i = 0; i < children.length; i++) {
+                    for (let i = 0; i < children.length; i++) {
                         // found the comment we are looking up to
                         if (children[i].data.name === until_name) {
                             // we only care about the comments before and we are done looking
@@ -221,7 +215,7 @@ module.exports = function (snooper_options) {
 
 
                     if (until_name) {
-                        children.map(function (comment) {
+                        children.map((comment) => {
                             saved_this.emit(saved_this.item_type, comment)
                         })
                     }
@@ -234,8 +228,8 @@ module.exports = function (snooper_options) {
                 return
             let saved_this = this
 
-            setTimeout(function () {
-                saved_this._get_items(start_page, "", until_name, function (first_comment_retrieved) {
+            setTimeout(() => {
+                saved_this._get_items(start_page, "", until_name, (first_comment_retrieved) => {
                     saved_this._concurrent_item_emitter(start_page, wait_interval, first_comment_retrieved)
                 })
             }, wait_interval)
