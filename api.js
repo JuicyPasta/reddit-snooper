@@ -9,34 +9,53 @@ module.exports = function (snooper_options) {
             this.requests_per_minuite = 60
             this.ms_between_requests = (1000 * 60) / this.requests_per_minuite
             this.last_request = 0
-            this.request_queue = []
-    }
+            this.token_expiration = 0
+            this.token = null
+        }
 
         // Retrieve OAUTH Token (tokens work for 1 hour each)
         // TODO: add retry logic
         get_token(cb) {
-            request.post({
-                url:     "https://www.reddit.com/api/v1/access_token",
-                form:    {
-                    "grant_type": "password",
-                    "username":   snooper_options.username,
-                    "password":   snooper_options.password
-                },
-                auth:    {
-                    "user": snooper_options.app_id,
-                    "pass": snooper_options.api_secret
-                },
-                headers: {
-                    "User-Agent": snooper_options.user_agent
-                }
-            }, (err, res, body) => {
-                if (err) {
-                    cb(err, null)
-                }
+            this._get_token(5, cb)
+        }
 
-                let token_info = JSON.parse(body)
-                cb(null, token_info.token_type + " " + token_info.access_token)
-            })
+        _get_token(retries, cb) {
+            if (Date.now() / 1000 <= this.token_expiration) {
+                cb(null, this.token)
+            } else {
+                request.post({
+                    url:     "https://www.reddit.com/api/v1/access_token",
+                    form:    {
+                        "grant_type": "password",
+                        "username":   snooper_options.username,
+                        "password":   snooper_options.password
+                    },
+                    auth:    {
+                        "user": snooper_options.app_id,
+                        "pass": snooper_options.api_secret
+                    },
+                    headers: {
+                        "User-Agent": snooper_options.user_agent
+                    }
+                }, (err, res, body) => {
+                    if (Math.random() > .5) {
+                        err = true
+                    }
+                    if (err && retries <= 0) {
+                        return cb(err, null)
+                    } else if (err) {
+                        console.log("retrying " + retries)
+                        return this._get_token(retries - 1, cb)
+                    }
+
+                    let token_info = JSON.parse(body)
+
+                    this.token_expiration = Date.now() / 1000 + token_info.expires_in / 2
+                    this.token = token_info.token_type + " " + token_info.access_token
+
+                    cb(null, this.token)
+                })
+            }
         }
 
         // throttle requests
@@ -59,7 +78,7 @@ module.exports = function (snooper_options) {
             }
         }
 
-        static construct_url(path) {
+        construct_url(path) {
             let default_endpoint = "https://www.reddit.com/"
             let oauth_endpoint = "https://oauth.reddit.com/"
 

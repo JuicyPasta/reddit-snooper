@@ -9,7 +9,6 @@ const snooper = Snooper(credentials)
 
 describe("Api Basic Operations", function () {
     it("makes a get request", function (done) {
-        this.skip()
         snooper.api.get("subreddits/mine/subscriber", {
             limit: 2
 
@@ -74,7 +73,6 @@ describe("Api Basic Operations", function () {
     })
 
     it("makes a patch request", function (done) {
-        this.skip()
         snooper.api.patch("/api/v1/me/prefs/", {
             "over_18": false
         }, function (err, statusCode, data) {
