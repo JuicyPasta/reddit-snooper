@@ -5,7 +5,6 @@ const EventEmitter = require("events")
 
 module.exports = function (snooper_options) {
 
-    // TODO: converge redditFeedWatcher and redditListingWatcher parent class, right now theres duplication so I dont break things that already work
     class RedditWatcher extends EventEmitter {
         constructor(start_page, item_type, options) {
             super()
@@ -14,6 +13,8 @@ module.exports = function (snooper_options) {
             this.options = options
             this.start_page = start_page
             this.is_closed = false
+            this.wait_interval = 0
+            this.retries = 3
 
             this.once("newListener", (event, listener) => {
                 if (event === this.item_type) {
@@ -34,14 +35,13 @@ module.exports = function (snooper_options) {
 
 
         get_items(start_page, after_name, posts_needed, until_name, cb_first_item, cb) {
-            this._get_items(start_page, after_name, posts_needed, until_name, [], cb_first_item, cb)
+            this._get_items(start_page, after_name, posts_needed, until_name, [], this.retries, cb_first_item, cb)
         }
 
         // calls the callback with a list of items
         // stop when we reach until_need or we get all posts_needed (whichever comes first)
-        _get_items(start_page, after_name, posts_needed, until_name, items, cb_first_item, cb) {
+        _get_items(start_page, after_name, posts_needed, until_name, items, retries, cb_first_item, cb) {
             if (this.is_closed) {
-                console.log("AHETR")
                 return
             }
 
@@ -49,13 +49,22 @@ module.exports = function (snooper_options) {
                 url: start_page,
                 qs:  {after: after_name}
             }, (err, res, body_json) => {
-                if (err) return cb(err, items)
                 let body
-                try {
-                    body = JSON.parse(body_json)
-                } catch (err) {
-                    return cb(err, items)
+
+                if (!err) {
+                    try {
+                        body = JSON.parse(body_json)
+                    } catch (_err) {
+                        err = _err
+                    }
                 }
+
+                if (err && retries > 0) {
+                    return this._get_items(start_page, after_name, posts_needed, until_name, items, retries-1, cb_first_item, cb)
+                } else if (err) {
+                    cb(err)
+                }
+
 
                 let children = body.data.children
 
@@ -84,7 +93,6 @@ module.exports = function (snooper_options) {
 
                     // this makes it so feeds dont receive current data
                     if (!until_name && !posts_needed && posts_needed !== 0){
-                        console.log("HERE")
                         return
                     }
 
@@ -97,6 +105,7 @@ module.exports = function (snooper_options) {
                             posts_needed ? posts_needed - children.length : posts_needed, // leave it null
                             until_name,
                             items,
+                            this.retries,
                             cb_first_item,
                             cb)
                     } else {
@@ -120,6 +129,9 @@ module.exports = function (snooper_options) {
         }
 
         start() {
+            if (this.is_closed)
+                return
+
             setTimeout(() => {
                 this.get_items(this.start_page, '', this.limit, '', null, (err, data) => {
                     if (err) return this.emit('error', err)
@@ -146,95 +158,34 @@ module.exports = function (snooper_options) {
     }
 
     // TODO: Refactor this to use RedditWatcher.get_items()
-    class RedditFeedWatcher extends EventEmitter {
+    class RedditFeedWatcher extends RedditWatcher {
         constructor(start_page, item_type, options) {
-            super()
-            this.is_closed = false
-
-            this.item_type = item_type
-            this.once("newListener", (event, listener) => {
-                if (event === item_type) {
-                    this._concurrent_item_emitter(start_page, 0, "")
-                } else {
-                    //console.log("whats this")
-                }
-            })
+            super(start_page, item_type, options)
         }
 
-        close() {
-            this.is_closed = true
-        }
-
-        // emits 'item'
-        _get_items(start_page, after_name, until_name, cb_first_item) {
+        _start(until_name) {
             if (this.is_closed)
                 return
 
-            let saved_this = this
-            request({
-                url: start_page,
-                qs:  {after: after_name}
-            }, (err, res, body_json) => {
-                if (err) {
-                    saved_this.emit("error", err)
-                    return
-                }
 
-                let body
-                try {
-                    body = JSON.parse(body_json)
-                } catch (err) {
-                    saved_this.emit("error", "could not parse input")
-                    //console.log('body_json ' + body_json)
-                    //console.log('err ' + err)
-                    return
-                }
-                let children = body.data.children
-
-                if (children.length > 0) {
-                    if (!after_name) {
-                        cb_first_item(children[0].data.name)
-                        //console.log(children[0].data.name + " - " + until_name)
-                    }
-
-                    after_name = children[children.length - 1].data.name
-                    let is_done = false
-
-                    for (let i = 0; i < children.length; i++) {
-                        // found the comment we are looking up to
-                        if (children[i].data.name === until_name) {
-                            // we only care about the comments before and we are done looking
-                            children = children.slice(0, i)
-                            is_done = true
-                            break
-                        }
-                    }
-
-                    if (!is_done && until_name)
-                        saved_this._get_items(start_page, after_name, until_name, cb_first_item)
-
-
-                    if (until_name) {
-                        children.map((comment) => {
-                            saved_this.emit(saved_this.item_type, comment)
-                        })
-                    }
-                }
-            })
-        }
-
-        _concurrent_item_emitter(start_page, wait_interval, until_name) {
-            if (this.is_closed)
-                return
-            let saved_this = this
+            //get_items(start_page, after_name, posts_needed, until_name, cb_first_item, cb)
 
             setTimeout(() => {
-                saved_this._get_items(start_page, "", until_name, (first_comment_retrieved) => {
-                    saved_this._concurrent_item_emitter(start_page, wait_interval, first_comment_retrieved)
+                this.get_items(this.start_page, '', null, until_name,(first_comment_retrieved) => {
+                    this._start(first_comment_retrieved)
+                }, (err, data) => {
+                    if (err) return this.emit('error', err)
+                    data.map((item) => {
+                        this.emit(this.item_type, item)
+                    })
                 })
-            }, wait_interval)
+            }, this.wait_interval)
+
         }
 
+        start() {
+            this._start('')
+        }
     }
 
     function getCommentWatcher(subreddit, options) {
