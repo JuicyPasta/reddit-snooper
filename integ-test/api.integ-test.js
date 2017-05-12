@@ -8,93 +8,82 @@ const Snooper = require("../reddit-snooper")
 const snooper = Snooper(credentials)
 
 describe("Api Basic Operations", function () {
-    it("makes a get request", function (done) {
-        snooper.api.get("subreddits/mine/subscriber", {
-            limit: 2
-
-        }, function (err, responseCode, data) {
-            responseCode.should.be.equal(200)
+    it("Retrieves token", (done)=> {
+        snooper.api.get_token((err, token) => {
+            console.log(token)
             should(err).not.be.ok()
-            data.data.children.length.should.be.equal(2)
+            token.should.be.ok()
             done()
         })
+    })
 
-    }).timeout(10000)
-
-    it("makes a post request", function (done) {
-        this.skip()
-
-        snooper.api.post("api/friend", {
-            api_type: "json",
-            name:     "juicypasta",
-            note:     "hi frriendd",
-            type:     "friend",
-            duration: 500
-
-        }, function (err, responseCode, data) {
-            responseCode.should.be.equal(200)
-            done()
-
-        })
-
-    }).timeout(10000)
-
-    it("replies to a comment", function (done) {
-        this.skip()
-
-        snooper.api.post("api/comment", {
-            api_type: "json",
-            text:     "another_test",
-            thing_id: "t1_dhavp8p"
-        }, function (err, statusCode, data) {
-            statusCode.should.be.equal(200)
-            should(err).not.be.ok()
-            data.json.errors.should.be.equal([])
-            console.log(data.json.data.things)
-            done()
-        })
-    }).timeout(10000)
-
-    it("makes a put request", function (done) {
-        this.skip()
-        snooper.api.put("api/v1/me/friends", {
-            name: "juicypasta",
-            note: "hi frriendd"
-
-        }, function (err, responseCode, data) {
-            console.log("err " + err)
-            console.log(data)
-            console.log(resposneCode)
-            //responseCode.should.be.equal(200)
-            done()
-
-        })
-    }).timeout(10000)
-
-    it("makes a patch request", function (done) {
-        snooper.api.patch("/api/v1/me/prefs/", {
-            "over_18": false
-        }, function (err, statusCode, data) {
-            should(err).not.be.ok()
-            data.over_18.should.be.equal(false)
-            statusCode.should.be.equal(200)
-            done()
-        })
-    }).timeout(10000)
-
-    it("ratelimits", function (done) {
-        this.skip()
-        for (let i = 0; i < 600; i++) {
-
+    describe("GET Requests", function() {
+        it("/subreddits/mine/subscriber", function (done) {
             snooper.api.get("subreddits/mine/subscriber", {
                 limit: 2
+
             }, function (err, responseCode, data) {
-                console.log(data)
                 responseCode.should.be.equal(200)
                 should(err).not.be.ok()
                 data.data.children.length.should.be.equal(2)
+                done()
             })
-        }
 
-    }).timeout(110000)
+        }).timeout(10000)
+        it("/api/info", function (done) {
+            snooper.api.get("/api/info", {
+                "id": "t1_dhcay8f"
+            }, function (err, statusCode, data) {
+                should(err).not.be.ok()
+                data.kind.should.be.equal("Listing")
+                statusCode.should.be.equal(200)
+                done()
+            })
+        }).timeout(10000)
+
+    })
+    describe("POST Requests", function() {
+        it("/api/hide", function (done) {
+            snooper.api.post("/api/hide", {
+                "id": "t3_6arf2r"
+            }, function (err, statusCode, data) {
+                should(err).not.be.ok()
+                statusCode.should.be.equal(200)
+                done()
+            })
+        }).timeout(10000)
+
+    })
+    describe("PUT Requests", function() {
+        it("/api/v1/me/friends/juicypasta", function (done) {
+            snooper.api.put("/api/v1/me/friends/juicypasta", {
+                "name": "juicypasta",
+            }, function (err, statusCode, data) {
+                should(err).not.be.ok()
+                statusCode.should.be.equal(200)
+                data.name.should.be.equal("juicypasta")
+                done()
+            })
+        }).timeout(10000)
+
+
+    })
+    describe("PATCH Requests", function() {
+        it("/api/v1/me/prefs", function (done) {
+            snooper.api.patch("/api/v1/me/prefs/", {
+                "over_18": false
+            }, function (err, statusCode, data) {
+                should(err).not.be.ok()
+                data.over_18.should.be.equal(false)
+                statusCode.should.be.equal(200)
+                done()
+            })
+        }).timeout(10000)
+
+
+    })
+    describe("DELETE Requests", function() {
+
+
+    })
 })

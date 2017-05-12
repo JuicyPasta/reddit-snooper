@@ -110,7 +110,7 @@ module.exports = function (snooper_options) {
                     }
                     if (method === "GET") {
                         request_options.qs = data
-                    } else if (method === "PATCH" || method === "PUT") {
+                    } else if (method === "PATCH" || method === "PUT" || method === "DELETE") {
                         request_options.body = data
                         request_options.json = true
                     } else if (method === "POST") {
