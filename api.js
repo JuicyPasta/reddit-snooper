@@ -2,6 +2,8 @@
 const request = require("request")
 const url = require("url")
 
+// TODO: Implement retry wrapper and refactor out builtin retries
+
 module.exports = function (snooper_options) {
 
     class ApiWrapper {
@@ -13,10 +15,9 @@ module.exports = function (snooper_options) {
             this.token = null
         }
 
-        // Retrieve OAUTH Token (tokens work for 1 hour each)
-        // TODO: add retry logic
+        // Retrieve OAUTH Token (tokens work for 30-60 mins each)
         get_token(cb) {
-            this._get_token(5, cb)
+            this._get_token(5, cb) // 5 retries
         }
 
         _get_token(retries, cb) {
@@ -38,13 +39,9 @@ module.exports = function (snooper_options) {
                         "User-Agent": snooper_options.user_agent
                     }
                 }, (err, res, body) => {
-                    if (Math.random() > .5) {
-                        err = true
-                    }
                     if (err && retries <= 0) {
                         return cb(err, null)
                     } else if (err) {
-                        console.log("retrying " + retries)
                         return this._get_token(retries - 1, cb)
                     }
 
@@ -90,7 +87,11 @@ module.exports = function (snooper_options) {
             //}
         }
 
-        generic_api_call(endpoint, method, data, retries_left, cb) {
+        generic_api_call(endpoint, method, data, cb) {
+            this._generic_api_call(endpoint, method, data, 3, cb)
+
+        }
+        _generic_api_call(endpoint, method, data, retries_left, cb) {
             this.schedule_request(() => {
 
                 this.get_token((err, token) => {
@@ -117,10 +118,10 @@ module.exports = function (snooper_options) {
                     }
 
                     request(request_options, (err, res, body_json) => {
-                        // console.log(res)
-                        if (err) {
-                            //console.log(err)
-                            cb(err)
+                        if (err && retries_left > 0) {
+                            return this._generic_api_call(endpoint, method, data, retries_left-1, cb)
+                        } else if (err) {
+                            return cb(err)
                         }
 
                         // dont parse if its already an object
@@ -185,23 +186,23 @@ module.exports = function (snooper_options) {
         }
 
         get(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "GET", data, 4, cb)
+            this.generic_api_call(this.construct_url(endpoint), "GET", data, cb)
         }
 
         post(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "POST", data, 4, cb)
+            this.generic_api_call(this.construct_url(endpoint), "POST", data, cb)
         }
 
         patch(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "PATCH", data, 4, cb)
+            this.generic_api_call(this.construct_url(endpoint), "PATCH", data, cb)
         }
 
         put(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "PUT", data, 4, cb)
+            this.generic_api_call(this.construct_url(endpoint), "PUT", data, cb)
         }
 
         del(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "DELETE", data, 4, cb)
+            this.generic_api_call(this.construct_url(endpoint), "DELETE", data, cb)
         }
     }
 

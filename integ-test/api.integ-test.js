@@ -19,7 +19,7 @@ describe("Api Basic Operations", function () {
             done()
         })
 
-    })
+    }).timeout(10000)
 
     it("makes a post request", function (done) {
         this.skip()
@@ -53,7 +53,7 @@ describe("Api Basic Operations", function () {
             console.log(data.json.data.things)
             done()
         })
-    }).timeout(2000)
+    }).timeout(10000)
 
     it("makes a put request", function (done) {
         this.skip()
@@ -69,8 +69,7 @@ describe("Api Basic Operations", function () {
             done()
 
         })
-
-    })
+    }).timeout(10000)
 
     it("makes a patch request", function (done) {
         snooper.api.patch("/api/v1/me/prefs/", {
@@ -81,7 +80,7 @@ describe("Api Basic Operations", function () {
             statusCode.should.be.equal(200)
             done()
         })
-    }).timeout(5000)
+    }).timeout(10000)
 
     it("ratelimits", function (done) {
         this.skip()
