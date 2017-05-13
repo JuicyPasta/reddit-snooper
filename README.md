@@ -8,7 +8,7 @@
 
 
 ## Simple to use
-reddit-snooper is designed to a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascipt a good choice for building a bot
+Reddit-snooper is designed to a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascipt a good choice for building a bot.
 
 ``` js
 snooper.watcher.getCommentWatcher('all') 
