@@ -6,6 +6,19 @@
 [![dependencies Status](https://david-dm.org/JuicyPasta/reddit-snooper/status.svg)](https://david-dm.org/JuicyPasta/reddit-snooper)
 [![Gitter](https://badges.gitter.im/reddit-snooper-nodjs/Lobby.svg)](https://gitter.im/reddit-snooper-nodjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
 
+
+## Simple to use
+reddit-snooper is designed to a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascipt a good choice for building a bot
+
+``` js
+snooper.watcher.getCommentWatcher('all') 
+    .on('comment', function(comment) {
+        console.log('/u/' + comment.data.author + ' posted a comment: ' + comment.data.body)
+        snooper.api.post(...) // leave a reply 
+    }
+```
+
+
 ## Table of Contents
 - [Setup and Configuration](#setup-and-configuration)
 - [Watcher](#reddit-watcher-snooperwatcher)
@@ -53,7 +66,7 @@ Right now you can watch for:
 - new posts reaching the first x pages of different listings (hot, top_24, top_day, controversial, rising) across the website or subreddit
 
 notify when a new comment is posted
-```js
+``` js
 snooper.watcher.getCommentWatcher('subreddit') // blank argument or 'all' looks at the entire website
     .on('comment', function(comment) {
         // comment is a object containing all comment data
@@ -66,7 +79,7 @@ snooper.watcher.getCommentWatcher('subreddit') // blank argument or 'all' looks 
 ```
 
 notify when a new post is posted
-```js
+``` js
 snooper.watcher.getPostWatcher('subreddit') // blank argument or 'all' looks at the entire website
     .on('post', function(post) {
         // comment is a object containing all comment data
@@ -77,7 +90,7 @@ snooper.watcher.getPostWatcher('subreddit') // blank argument or 'all' looks at 
 ```
 
 notify when something is gilded
-```js
+``` js
 snooper.watcher.getGildedWatcher('subreddit') // blank argument or 'all' looks at the entire website
     .on('item', function(item) {
         // comment is a object containing all comment data
@@ -88,7 +101,7 @@ snooper.watcher.getGildedWatcher('subreddit') // blank argument or 'all' looks a
 ```
 
 notify when a new post reaches a specific listing (eg. the front page)
-```js
+``` js
 let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 50 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
@@ -137,6 +150,11 @@ snooper.watcher.getGildedWatcher('all')
 ... coming soon
 })
 
+```
+
+#### RemindMe! bot
+```js
+// also coming soon, this is really easy to implement with setTimeout 
 ```
 
 #### download all gifs that make it to the front 2 pages of hot on r/gifs
