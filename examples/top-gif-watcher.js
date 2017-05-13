@@ -4,7 +4,7 @@ const fs = require('fs')
 const credentials = require("../secrets/reddit-credentials")
 
 const Snooper = require("../reddit-snooper"),
-    snooper = new Snooper(credentials)
+    snooper = new Snooper(credentials) // alternative way to bring in credentials (as a module)
 /**
  * snooper = new Snooper(
  * {

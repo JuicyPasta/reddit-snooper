@@ -49,16 +49,56 @@ Reddit watchers are event emitters that trigger when new things happen on the we
 Right now you can watch for:
 - new comments across the website or on a specific subreddit
 - new posts across the website or on a specific subreddit
+- post or comment is gilded (website or subreddit)
 - new posts reaching the first x pages of different listings (hot, top_24, top_day, controversial, rising) across the website or subreddit
 
-There are 4 types of watchers: 
-1. snooper.watcher.getCommentWatcher(subreddit or 'all') // emits events when a comment is posted
-2. snooper.watcher.getPostWatcher(subreddit or 'all') // emits an event when a post is made
-3. snooper.watcher.getGildedWatcher(subreddit or 'all') // emits an event as soon as something gets gilded
-3. snooper.watcher.getListingWatcher(subreddit or 'all', options) // watches a listing and emits an event if something changes (a new post reaches the front page)
-    - options: object
-        - listing: 'hot', 'rising', 'controversial', 'top_day', 'top_hour', 'top_month', 'top_year', 'top_all'
-        - limit: how many of the top posts you want to watch, if any of these spots get overtaken by a new post an event will be emitted
+notify when a new comment is posted
+```js
+snooper.watcher.getCommentWatcher('subreddit') // blank argument or 'all' looks at the entire website
+    .on('comment', function(comment) {
+        // comment is a object containing all comment data
+        console.log('comment was posted by: ' + comment.data.author)
+        console.log('contents ' + comment.data.body)
+        // or
+        console.log(comment)
+    })
+    .on('error', console.error)
+```
+
+notify when a new post is posted
+```js
+snooper.watcher.getPostWatcher('subreddit') // blank argument or 'all' looks at the entire website
+    .on('post', function(post) {
+        // comment is a object containing all comment data
+        console.log('post was posted by: ' + post.data.author)
+        console.log(post)
+    })
+    .on('error', console.error)
+```
+
+notify when something is gilded
+```js
+snooper.watcher.getGildedWatcher('subreddit') // blank argument or 'all' looks at the entire website
+    .on('item', function(item) {
+        // comment is a object containing all comment data
+        console.log('user: ' + post.data.author + ' has been gilded')
+        console.log(item)
+    })
+    .on('error', console.error)
+```
+
+notify when a new post reaches a specific listing (eg. the front page)
+```js
+let options = {
+    listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
+    limit: 50 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
+}
+snooper.watcher.getListingWatcher('subreddit' or 'all', options) 
+    .on('item', function(item) {
+        console.log("new item in listing " + item)
+    })
+    .on('error', console.error)
+```
 
 ### examples (full programs in the examples folder)
 #### unexpected factorial bot
@@ -91,7 +131,7 @@ snooper.watcher.getCommentWatcher("all")
 #### repost all gilded comments with over 1000 ups to r/bestof (please dont do this)
 ``` js
 
-snooper.watcher.getGilded('all')
+snooper.watcher.getGildedWatcher('all')
 .on('item', function(err, data) {
     
 ... coming soon
@@ -100,16 +140,17 @@ snooper.watcher.getGilded('all')
 ```
 
 #### download all gifs that make it to the front 2 pages of hot on r/gifs
+this is different than just downloading the front 2 pages since it also triggers an event when the front 2 pages change
 ``` js
-// NOTICE THIS IS DIFFERENT THAT JUST DOWNLOADING THE FIRST 2 PAGES
 
 snooper.watcher.getListingWatcher('gifs', {
-    listing: 'top_day',
-    limit: 4 // 2 pages
+    listing: 'top_day', // look at the top posts of the day
+    limit: 50 // 2 pages (25 per page)
 })
 .on('item', function(post) { // post will be a json object containing all post information
-    // ONLY NON STICKIED POSTS
     let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
+    
+    // filter out stickied posts
     if (!post.data.stickied && post.kind === 't3') {
        request(post.data.url).pipe(fs.createWriteStream("./gifs/"+post.data.title.split('\"').join('')+urlmatch[0]))
     }
@@ -147,17 +188,36 @@ In order to use the api head over to the [Reddit API Documentation](https://www.
 // data: JSON data, dependent on the request which is specified in the docs
 // NOTE: the function .get is used for api calls that use HTTP GET, you can find the method each api endpiont uses on (you guessed it) the reddit api docs
 
+// HTTP GET
 snooper.api.get(endpoint, data, function(err, responseCode, responseData) {
-        err // any errors that occurred in the api request
-        responseCode // http status code of the api request
-        responseData // json data of the api response
-    })
+    if (err) {
+        return console.error("api request failed: " + err)
+    }
     
-snooper.api.post(same as get)
-snooper.api.patch(same as get)
-snooper.api.put(same as get)
-snooper.api.delete(same as get)
+    console.log("API reponded")
+    console.log("status: " + respnoseCode) // http status codes
+    console.log("data: " + responseData)
+})
+    
+// HTTP POST
+snooper.api.post(endpoint, data, function(err, responseCode, responseData) {
+    //...
+})
 
+// HTTP PATCH
+snooper.api.patch(endpoint, data, function(err, responseCode, responseData) {
+    //...
+})
+
+// HTTP PUT
+snooper.api.put(endpoint, data, function(err, responseCode, responseData) {
+    //...
+})
+
+// HTTP DELETE
+snooper.api.delete(endpoint, data, function(err, responseCode, responseData) {
+    //...
+})
 
 // gets an api token 
 snooper.api.get_token(function(err, token) {
@@ -170,20 +230,38 @@ snooper.api.get_token(function(err, token) {
 
 
 ### basic api usage
+
+check how much karma your bot has
 ``` js
-// check how much karma your bot has
 snooper.api.get('api/v1/me/karma', {}, function(err, statusCode, data) {
     console.log("I have " + data.karma + " karma")
 })
+```
 
-// I highly doubt your bot is over 18 years of age
+post a comment
+``` js
+snooper.api.post("/api/comment", {
+    api_type: "json",
+    text:     "Hello World"
+    thing_id: comment.data.name
+}, function (err, statusCode, data) {
+    if (!err) console.log('just replied to comment: ' + comment.data.name)
+})
+
+```
+
+
+I highly doubt your bot is over 18 years of age
+``` js
 snooper.api.patch('/api/v1/me/prefs/', {
     over_18: false
 }, function(err, statusCode, data) {
 
 })
+```
 
-// activate turbo mode doubling performance       (kidding)
+activate turbo mode doubling performance       (kidding)
+``` js
 snooper.api.post('api/v1/gold/give', {
     months: 1,
     username: 'juicypasta'
@@ -192,36 +270,6 @@ snooper.api.post('api/v1/gold/give', {
 })
 
 ```
-
-### Debugging 
-**DISCLAIMER:** I have not tested every single endpoint so there is a chance that something might not work, if this happens you can open up an issue(/ message me), or send the request manually using a token from get_token method.
-
-If you choose latter option I recommend using something like postman to verify you are sending the request correctly. After you know how the endpoint works, you can use the get_token method to send your own request, just remember to put the token in the 'Authentication' header. 
-
-#### sending a request 'manually' using the [request](https://www.npmjs.com/package/request) library
-``` js
-snooper.api.get_token(function (err, token) {
-    //console.log(token)
-    if (err) console.error(err)
-
-    request({
-        url:     endpoint, // put the desired endpoint here
-        method:  method, // HTTP method ("GET", "POST", "PATCH"...
-        headers: {
-            "Authorization": token,
-            "User-Agent":    "Snooper/1.0"
-        },
-        data: { // !!! this might be called data, body, or qs depending on the request type, check the request documentation
-            key: value,
-            ...
-            
-        }
-    }, function (err, res, body_json) {
-        http response
-    }
-```
-
-
 
 
 ## Coming Soon

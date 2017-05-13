@@ -1,8 +1,8 @@
 const EventEmitter = require('events').EventEmitter;
 const should = require('should');
 
-const credentials = require('../secrets/reddit-credentials')
-const Snooper = require('../reddit-snooper')
+const credentials = require('../../secrets/reddit-credentials')
+const Snooper = require('../../reddit-snooper')
 const snooper = Snooper(credentials)
 
 
