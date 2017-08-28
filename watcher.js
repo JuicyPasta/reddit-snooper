@@ -65,7 +65,6 @@ module.exports = function (snooper_options) {
                     cb(err)
                 }
 
-
                 let children = body.data.children
 
                 if (children.length > 0) {
@@ -202,6 +201,14 @@ module.exports = function (snooper_options) {
         return new RedditFeedWatcher(start_page, "post", options)
     }
 
+    function getMultiWatcher(username, multi, options) {
+        username = username.trim().replace("/", "")
+        multi = multi.trim().replace("/", "")
+        let start_page = "https://reddit.com/user/" + username + "/m/" + multi + "/new.json"
+
+        return new RedditFeedWatcher(start_page, "post", options)
+    }
+
     function getGildedWatcher(subreddit, options) {
 
     }
@@ -231,7 +238,8 @@ module.exports = function (snooper_options) {
         getCommentWatcher,
         getPostWatcher,
         getGildedWatcher,
-        getListingWatcher
+        getListingWatcher,
+        getMultiWatcher
     }
 
 }

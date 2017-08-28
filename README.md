@@ -113,6 +113,17 @@ snooper.watcher.getListingWatcher('subreddit' or 'all', options)
     .on('error', console.error)
 ```
 
+notify when a new post is posted (on a user's multi subreddit)
+``` js
+snooper.watcher.getMultiWatcher('username', 'multi')
+    .on('post', function(post) {
+        // comment is a object containing all comment data
+        console.log('post was posted by: ' + post.data.author)
+        console.log(post)
+    })
+    .on('error', console.error)
+```
+
 ### examples (full programs in the examples folder)
 #### unexpected factorial bot
 ``` js
