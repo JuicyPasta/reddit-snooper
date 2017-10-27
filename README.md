@@ -43,7 +43,7 @@ var Snooper = require('reddit-snooper')
             user_agent: 'OPTIONAL user agent for your bot',
 
             automatic_retries: true, // automatically handles condition when reddit says 'you are doing this too much'
-            api_requests_per_minuite: 60 // api requests will be spread out in order to play nicely with Reddit
+            api_requests_per_minute: 60 // api requests will be spread out in order to play nicely with Reddit
         })
 ```
 
