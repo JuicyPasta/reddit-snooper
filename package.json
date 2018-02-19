@@ -1,6 +1,6 @@
 {
   "name": "reddit-snooper",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Simple Reddit bot framework for nodejs",
   "main": "reddit-snooper.js",
   "files": [
@@ -19,13 +19,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/JuicyPasta/reddit-snooper"
+    "url": "git+https://github.com/JuicyPasta/reddit-snooper.git"
   },
-  "author": "",
-  "license": "BSD-2-Clause",
+  "keywords": [
+    "reddit",
+    "bot",
+    "reddit-bot",
+    "reddit-api"
+  ],
+  "author": "Jackson Darrow",
+  "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/JuicyPasta/reddit-snooper/issues"
   },
+  "homepage": "https://github.com/JuicyPasta/reddit-snooper#readme",
   "scripts": {
     "test": "mocha test",
     "test:integ": "mocha test/integ-test --timeout 30000"

@@ -1,26 +1,24 @@
 # Reddit-Snooper - Reddit bot framework for Nodejs
 
-[![npm package](https://nodei.co/npm/reddit-snooper.png?downloads=true&downloadRank=true&stars=true)](https://nodei.co/npm/reddit-snooper/)
-
-[![Build Status](https://travis-ci.org/JuicyPasta/reddit-snooper.svg?branch=master)](https://travis-ci.org/JuicyPasta/reddit-snooper)
-[![dependencies Status](https://david-dm.org/JuicyPasta/reddit-snooper/status.svg)](https://david-dm.org/JuicyPasta/reddit-snooper)
-[![Gitter](https://badges.gitter.im/reddit-snooper-nodjs/Lobby.svg)](https://gitter.im/reddit-snooper-nodjs/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=body_badge)
+[![npm](https://img.shields.io/npm/v/reddit-snooper.svg)](https://www.npmjs.com/package/reddit-snooper)
+[![test](https://github.com/JuicyPasta/reddit-snooper/actions/workflows/test.yml/badge.svg)](https://github.com/JuicyPasta/reddit-snooper/actions/workflows/test.yml)
 
 
 ## Simple to use
-Reddit-snooper is designed to a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascipt a good choice for building a bot.
+Reddit-snooper is designed to be a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascript a good choice for building a bot.
 
 ``` js
 snooper.watcher.getCommentWatcher('all') 
     .on('comment', function(comment) {
         console.log('/u/' + comment.data.author + ' posted a comment: ' + comment.data.body)
         snooper.api.post(...) // leave a reply 
-    }
+    })
 ```
 
 
 ## Table of Contents
 - [Setup and Configuration](#setup-and-configuration)
+- [What needs credentials](#what-needs-credentials)
 - [Watcher](#reddit-watcher-snooperwatcher)
 - [Api](#reddit-api-snooperapi)
 
@@ -29,32 +27,45 @@ snooper.watcher.getCommentWatcher('all')
 ``` bash
 npm install reddit-snooper --save
 ```
+Needs node 18 or newer (it uses the built in fetch, no other dependencies).
 
 ### Library usage and configuration
 ``` js
-var Snooper = require('reddit-snooper')
+var Snooper = require('reddit-snooper'),
     snooper = new Snooper(
         {
-            // credential information is not needed for snooper.watcher
+            // app_id and api_secret are enough for snooper.watcher,
+            // username and password are only needed when your bot acts as a user (posting, voting, etc.)
             username: 'reddit_username',
             password: 'reddit password',
             app_id: 'reddit api app id',
             api_secret: 'reddit api secret',
-            user_agent: 'OPTIONAL user agent for your bot',
+            user_agent: 'node:my-bot:v1.0.0 (by /u/your_username)', // OPTIONAL but reddit wants one in this format
 
             automatic_retries: true, // automatically handles condition when reddit says 'you are doing this too much'
-            api_requests_per_minute: 60 // api requests will be spread out in order to play nicely with Reddit
+            api_requests_per_minute: 60 // api requests will be spread out in order to play nicely with Reddit (it allows 100)
         })
 ```
 
 ### API setup 
-All you need to get up and running is obtain an api_id and an api_secret. Both can be created on the [Reddit app console](https://reddit.com/prefs/apps)
+All you need to get up and running is obtain an app_id and an api_secret. Both can be created on the [Reddit app console](https://www.reddit.com/prefs/apps)
 1. Create (or log into) a reddit account
-2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
+2. Navigate to the [authorized applications console](https://www.reddit.com/prefs/apps)
 3. Select 'create another app...' at the bottom
-4. Fill in the name, description and click on 'script', put in anything for the redirect uri, its not needed and you can change it later if you want to
-5. Copy down the 'secret' that is your api_secret, the 14 character string by the name of your app is your app_id
+4. Fill in the name, description and click on 'script', put in anything for the redirect uri, it's not needed and you can change it later if you want to
+5. Copy down the 'secret' that is your api_secret, the string under the name of your app is your app_id
 6. Use these values and your credentials to configure the snooper
+
+Reddit reviews new apps now (their Responsible Builder Policy), so you might have to request API access and wait before step 3 works.
+
+### What needs credentials
+Reddit wants OAuth for pretty much everything now, caps each app at about 100 requests a minute and blocks logged out or generic looking clients a lot more than it used to.
+
+- watchers just need an app_id and api_secret, snooper gets an app only token and watches through oauth.reddit.com. With no credentials at all it falls back to the public .json pages (10 requests a minute), but Reddit blocks most of that traffic now and you'll get a 403 "blocked by network security" error.
+- snooper.api calls that act as your bot (commenting, voting, /api/v1/me, etc.) need username and password too, on a 'script' app. GETs without any credentials go to the public .json pages like the watchers do.
+- set your own user_agent, something like `node:my-bot:v1.0.0 (by /u/your_username)`. The default one just says reddit-snooper.
+
+Snooper spaces requests out to stay under `api_requests_per_minute`, reads Reddit's `x-ratelimit-*` headers and waits out 429s on its own.
 
 
 ## Reddit Watcher (snooper.watcher)
@@ -62,8 +73,10 @@ Reddit watchers are event emitters that trigger when new things happen on the we
 Right now you can watch for:
 - new comments across the website or on a specific subreddit
 - new posts across the website or on a specific subreddit
-- post or comment is gilded (website or subreddit)
-- new posts reaching the first x pages of different listings (hot, top_24, top_day, controversial, rising) across the website or subreddit
+- new posts on a user's multi subreddit
+- new posts reaching the first x pages of different listings (hot, rising, controversial, top_hour, top_day, top_week, top_month, top_year, top_all) across the website or subreddit
+
+Subreddits can be combined like `'pics+gifs'`. Every watcher has a `.close()` to stop it.
 
 notify when a new comment is posted
 ``` js
@@ -89,24 +102,13 @@ snooper.watcher.getPostWatcher('subreddit') // blank argument or 'all' looks at 
     .on('error', console.error)
 ```
 
-notify when something is gilded
-``` js
-snooper.watcher.getGildedWatcher('subreddit') // blank argument or 'all' looks at the entire website
-    .on('item', function(item) {
-        // comment is a object containing all comment data
-        console.log('user: ' + post.data.author + ' has been gilded')
-        console.log(item)
-    })
-    .on('error', console.error)
-```
-
 notify when a new post reaches a specific listing (eg. the front page)
 ``` js
 let options = {
-    listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
+    listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_hour' OR 'top_day' OR 'top_week' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 50 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
 }
-snooper.watcher.getListingWatcher('subreddit' or 'all', options) 
+snooper.watcher.getListingWatcher('subreddit', options) // 'all' for r/all, blank for the front page
     .on('item', function(item) {
         console.log("new item in listing " + item)
     })
@@ -152,17 +154,6 @@ snooper.watcher.getCommentWatcher("all")
 // commentWatcher.close()
 ```
 
-#### repost all gilded comments with over 1000 ups to r/bestof (please dont do this)
-``` js
-
-snooper.watcher.getGildedWatcher('all')
-.on('item', function(err, data) {
-    
-... coming soon
-})
-
-```
-
 #### RemindMe! bot
 ```js
 // also coming soon, this is really easy to implement with setTimeout 
@@ -181,7 +172,7 @@ snooper.watcher.getListingWatcher('gifs', {
     
     // filter out stickied posts
     if (!post.data.stickied && post.kind === 't3') {
-       request(post.data.url).pipe(fs.createWriteStream("./gifs/"+post.data.title.split('\"').join('')+urlmatch[0]))
+       download(post.data.url, "./gifs/" + post.data.title.replace(/[^\w\- ]/g, '') + urlmatch[0]) // little fetch helper, see examples/
     }
 
 })
@@ -198,7 +189,7 @@ snooper.watcher.getPostWatcher('pics')
     // also make sure there is an image link
     let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
     if (post.kind === 't3' && urlmatch) {
-        request(post.data.url).pipe(fs.createWriteStream("gifs/"+post.data.title+urlmatch[0]))
+        download(post.data.url, "pics/" + post.data.title.replace(/[^\w\- ]/g, '') + urlmatch[0])
     }
 
 })
@@ -215,7 +206,7 @@ In order to use the api head over to the [Reddit API Documentation](https://www.
 ``` js
 // endpoint: api endpoint ex: 'api/v1/me' or '/api/v1/me/karma/' (listed on api documentation)
 // data: JSON data, dependent on the request which is specified in the docs
-// NOTE: the function .get is used for api calls that use HTTP GET, you can find the method each api endpiont uses on (you guessed it) the reddit api docs
+// NOTE: the function .get is used for api calls that use HTTP GET, you can find the method each api endpoint uses on (you guessed it) the reddit api docs
 
 // HTTP GET
 snooper.api.get(endpoint, data, function(err, responseCode, responseData) {
@@ -223,8 +214,8 @@ snooper.api.get(endpoint, data, function(err, responseCode, responseData) {
         return console.error("api request failed: " + err)
     }
     
-    console.log("API reponded")
-    console.log("status: " + respnoseCode) // http status codes
+    console.log("API responded")
+    console.log("status: " + responseCode) // http status codes
     console.log("data: " + responseData)
 })
     
@@ -243,7 +234,7 @@ snooper.api.put(endpoint, data, function(err, responseCode, responseData) {
     //...
 })
 
-// HTTP DELETE
+// HTTP DELETE (snooper.api.del works too)
 snooper.api.delete(endpoint, data, function(err, responseCode, responseData) {
     //...
 })
@@ -271,7 +262,7 @@ post a comment
 ``` js
 snooper.api.post("/api/comment", {
     api_type: "json",
-    text:     "Hello World"
+    text:     "Hello World",
     thing_id: comment.data.name
 }, function (err, statusCode, data) {
     if (!err) console.log('just replied to comment: ' + comment.data.name)
@@ -289,17 +280,6 @@ snooper.api.patch('/api/v1/me/prefs/', {
 })
 ```
 
-activate turbo mode doubling performance       (kidding)
-``` js
-snooper.api.post('api/v1/gold/give', {
-    months: 1,
-    username: 'juicypasta'
-}, function(err, statusCode, data) {
-
-})
-
-```
-
 
 ## Coming Soon
 - Support for multiple accounts
@@ -308,5 +288,9 @@ snooper.api.post('api/v1/gold/give', {
 - Watchers for **everything**
     - private messages
     - replies
-    - new post reaching the front page (configurable to different pages/ # of pages)
 
+## Tests
+``` bash
+npm test            # unit tests, runs against a fake reddit so no credentials needed
+npm run test:integ  # hits the real api, needs secrets/reddit-credentials.js (same options as above)
+```
