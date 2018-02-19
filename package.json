@@ -14,8 +14,8 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "mocha": "^3.3.0",
-    "should": "^11.2.1"
+    "mocha": "^12.0.3",
+    "should": "^13.2.3"
   },
   "repository": {
     "type": "git",
@@ -27,6 +27,7 @@
     "url": "https://github.com/JuicyPasta/reddit-snooper/issues"
   },
   "scripts": {
-    "test": "mocha test"
+    "test": "mocha test",
+    "test:integ": "mocha test/integ-test --timeout 30000"
   }
 }
