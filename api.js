@@ -1,138 +1,192 @@
 "use strict"
-const request = require("request")
-const url = require("url")
+const { http_request, Limiter, retry_after_ms, backoff_ms } = require("./http")
+const version = require("./package.json").version
 
-// TODO: Implement retry wrapper and refactor out builtin retries
+const DEFAULT_USER_AGENT = "node:reddit-snooper:v" + version + " (by /u/juicypasta)"
 
 module.exports = function (snooper_options) {
+    snooper_options = snooper_options || {}
+
+    const endpoints = Object.assign({
+        token:  "https://www.reddit.com/api/v1/access_token",
+        oauth:  "https://oauth.reddit.com/", // anything with a bearer token goes here
+        public: "https://www.reddit.com/"    // logged out .json pages
+    }, snooper_options.endpoints)
 
     class ApiWrapper {
         constructor(snooper_options) {
-            this.requests_per_minuite = 60
-            this.ms_between_requests = (1000 * 60) / this.requests_per_minuite
-            this.last_request = 0
+            this.user_agent = snooper_options.user_agent || DEFAULT_USER_AGENT
+
+            // reddit gives oauth clients 100 requests / minute (averaged over 10 minutes), 60 leaves some room
+            this.requests_per_minute = snooper_options.api_requests_per_minute || snooper_options.api_requests_per_minuite || 60
+            this.limiter = new Limiter(this.requests_per_minute)
+
+            // logged out traffic gets 10 requests / minute (when reddit lets it through at all)
+            this.public_limiter = new Limiter(10)
+
             this.token_expiration = 0
             this.token = null
+            this.token_callbacks = null
         }
 
-        // Retrieve OAUTH Token (tokens work for 30-60 mins each)
+        // watchers only need an app id + secret, posting as a user also needs username + password
+        has_credentials() {
+            return !!(snooper_options.app_id && snooper_options.api_secret)
+        }
+
+        // Retrieve OAUTH Token (tokens are good for an hour, we grab a new one after 30 mins)
         get_token(cb) {
-            this._get_token(5, cb) // 5 retries
+            if (this.token && Date.now() / 1000 <= this.token_expiration) {
+                return cb(null, this.token)
+            }
+
+            if (!this.has_credentials()) {
+                return cb("reddit api credentials (app_id and api_secret) are needed for this, see the README")
+            }
+
+            // only ask reddit once even if a bunch of calls need a token at the same time
+            if (this.token_callbacks) {
+                return this.token_callbacks.push(cb)
+            }
+            this.token_callbacks = [cb]
+
+            this._get_token(5, (err, token) => { // 5 retries
+                let callbacks = this.token_callbacks
+                this.token_callbacks = null
+                callbacks.forEach((callback) => callback(err, token))
+            })
         }
 
         _get_token(retries, cb) {
-            if (Date.now() / 1000 <= this.token_expiration) {
-                cb(null, this.token)
-            } else {
-                request.post({
-                    url:     "https://www.reddit.com/api/v1/access_token",
-                    form:    {
-                        "grant_type": "password",
-                        "username":   snooper_options.username,
-                        "password":   snooper_options.password
-                    },
-                    auth:    {
-                        "user": snooper_options.app_id,
-                        "pass": snooper_options.api_secret
-                    },
-                    headers: {
-                        "User-Agent": snooper_options.user_agent
-                    }
-                }, (err, res, body) => {
-                    if (err && retries <= 0) {
-                        return cb(err, null)
-                    } else if (err) {
-                        return this._get_token(retries - 1, cb)
-                    }
-
-                    let token_info = JSON.parse(body)
-
-                    this.token_expiration = Date.now() / 1000 + token_info.expires_in / 2
-                    this.token = token_info.token_type + " " + token_info.access_token
-
-                    cb(null, this.token)
-                })
+            // script apps can log in as the bot account, otherwise use app only oauth (read only stuff)
+            let form = (snooper_options.username && snooper_options.password) ? {
+                "grant_type": "password",
+                "username":   snooper_options.username,
+                "password":   snooper_options.password
+            } : {
+                "grant_type": "client_credentials"
             }
-        }
 
-        // throttle requests
-        schedule_request(api_request, high_priority, desired_wait_time_ms) {
-            if (desired_wait_time_ms) {
-                // TODO: fix case where lots of these could go off at once breaking the rate limit
-                setTimeout(api_request, desired_wait_time_ms)
-            } else {
-                let time_diff = Date.now() - this.last_request
-                if (time_diff >= this.ms_between_requests) {
-                    api_request()
-                    this.last_request = Date.now()
-                } else {
-                    let wait_time = this.ms_between_requests - time_diff
-                    //console.log("wait time " + wait_time)
-                    setTimeout(api_request, wait_time)
-
-                    this.last_request = Date.now() + wait_time
+            http_request({
+                url:     endpoints.token,
+                method:  "POST",
+                form:    form,
+                headers: {
+                    "Authorization": "Basic " + Buffer.from(snooper_options.app_id + ":" + snooper_options.api_secret).toString("base64"),
+                    "User-Agent":    this.user_agent
                 }
+            }, (err, res) => {
+                let retryable = err || res.statusCode === 429 || res.statusCode >= 500
+                if (retryable && retries > 0) {
+                    let wait = err ? backoff_ms(5 - retries) : retry_after_ms(res.headers, 5 - retries)
+                    return setTimeout(() => this._get_token(retries - 1, cb), wait)
+                } else if (err) {
+                    return cb(err, null)
+                }
+
+                let token_info = res.body
+                // reddit sends a 200 with {"error": "invalid_grant"} when the password is wrong
+                if (res.statusCode !== 200 || !token_info || !token_info.access_token) {
+                    let reason = (token_info && (token_info.error || token_info.message)) || "no access_token in response"
+                    return cb("could not get an oauth token from reddit (" + res.statusCode + "): " + reason, null)
+                }
+
+                this.token_expiration = Date.now() / 1000 + token_info.expires_in / 2
+                this.token = token_info.token_type + " " + token_info.access_token
+
+                cb(null, this.token)
+            })
+        }
+
+        // throttle requests, desired_wait_time_ms delays just this request (it still waits its turn after that)
+        schedule_request(api_request, high_priority, desired_wait_time_ms, limiter) {
+            limiter = limiter || this.limiter
+            if (desired_wait_time_ms) {
+                setTimeout(() => limiter.schedule(api_request), desired_wait_time_ms)
+            } else {
+                limiter.schedule(api_request)
             }
         }
 
-        construct_url(path) {
-            let default_endpoint = "https://www.reddit.com/"
-            let oauth_endpoint = "https://oauth.reddit.com/"
+        // authed calls go to oauth.reddit.com, logged out GETs fall back to the public .json pages
+        construct_url(path, method) {
+            if (!this.has_credentials() && (!method || method === "GET")) {
+                let public_url = new URL(path, endpoints.public)
+                if (!public_url.pathname.endsWith(".json")) {
+                    public_url.pathname = public_url.pathname.replace(/\/+$/, "") + ".json"
+                }
+                return public_url.toString()
+            }
 
-            //if (path.indexOf('api') > -1) {
-
-            return (new url.URL(path, oauth_endpoint)).toString()
-            //} else {
-            //   return (new url.URL(path+'.json', default_endpoint)).toString()
-            //}
+            return (new URL(path, endpoints.oauth)).toString()
         }
 
         generic_api_call(endpoint, method, data, cb) {
             this._generic_api_call(endpoint, method, data, 3, cb)
-
         }
-        _generic_api_call(endpoint, method, data, retries_left, cb) {
-            this.schedule_request(() => {
 
-                this.get_token((err, token) => {
-                    //console.log(token)
-                    if (err) {
-                        cb(err)
-                    }
-                    // data.raw_json = 1 // dont replace json objects with html escaped <, > and &
+        _generic_api_call(endpoint, method, data, retries_left, cb, attempt) {
+            attempt = attempt || 0
+            let needs_token = endpoint.indexOf(endpoints.oauth) === 0
+            let limiter = needs_token ? this.limiter : this.public_limiter
+
+            // back off the whole queue (reddit is struggling or wants us to slow down) then go again
+            let retry = (wait_ms, retries) => {
+                limiter.backoff(wait_ms)
+                this._generic_api_call(endpoint, method, data, retries, cb, attempt + 1)
+            }
+
+            this.schedule_request(() => {
+                let send = (token) => {
                     let request_options = {
                         url:     endpoint,
                         method:  method,
                         headers: {
-                            "Authorization": token,
-                            "User-Agent":    snooper_options.user_agent
+                            "User-Agent": this.user_agent
                         }
                     }
+                    if (token) request_options.headers["Authorization"] = token
+
+                    // data.raw_json = 1 // dont replace json objects with html escaped <, > and &
                     if (method === "GET") {
                         request_options.qs = data
                     } else if (method === "PATCH" || method === "PUT" || method === "DELETE") {
-                        request_options.body = data
-                        request_options.json = true
+                        if (data !== undefined && data !== null) request_options.json = data
                     } else if (method === "POST") {
-                        request_options.form = data
+                        request_options.form = data || {}
                     }
 
-                    request(request_options, (err, res, body_json) => {
+                    http_request(request_options, (err, res) => {
                         if (err && retries_left > 0) {
-                            return this._generic_api_call(endpoint, method, data, retries_left-1, cb)
+                            return retry(backoff_ms(attempt), retries_left - 1)
                         } else if (err) {
                             return cb(err)
                         }
 
-                        // dont parse if its already an object
-                        let body = (typeof body_json === "string") ? JSON.parse(body_json) : body_json
+                        let body = res.body
 
-                        // rate limit info - oauth2 clients get 60 requests / minuite
-                        let ratelimit_used = res.headers["x-ratelimit-used"] // used during period
-                        let ratelimit_remaining = res.headers["x-ratelimit-remaining"] // remaining requests in period
-                        let ratelimit_reset = res.headers["x-ratelimit-reset"] // time until end of period
+                        // rate limit info, reddit sends these on every response
+                        // x-ratelimit-used: used during period
+                        // x-ratelimit-remaining: remaining requests in period
+                        // x-ratelimit-reset: seconds until end of period
+                        limiter.update(res.headers)
 
-                        //console.log("ratelimit remaining:" + ratelimit_remaining + " reset:" + ratelimit_reset + " used:" + ratelimit_used)
+                        // token got revoked or expired early, grab a new one and try again
+                        if (res.statusCode === 401 && token && retries_left > 0) {
+                            this.token = null
+                            this.token_expiration = 0
+                            return retry(0, retries_left - 1)
+                        }
+
+                        // too many requests, wait however long reddit says and try again
+                        if (res.statusCode === 429) {
+                            let wait = retry_after_ms(res.headers, attempt)
+                            if (retries_left > 0) {
+                                return retry(wait, retries_left - 1)
+                            }
+                            limiter.backoff(wait)
+                            return cb(null, res.statusCode, body)
+                        }
 
                         let status_class = Math.floor(res.statusCode / 100)
 
@@ -145,10 +199,10 @@ module.exports = function (snooper_options) {
                                 // well is it a success...
                                 if (body && body.json && body.json.ratelimit) {
                                     if (snooper_options.automatic_retries) {
-                                        //console.log('retrying in ' + body.json.ratelimit *1000)
-                                        this.schedule_request(() => {
-                                            this.generic_api_call(endpoint, method, data, retries_left, cb)
-                                        }, false, body.json.ratelimit *1000)
+                                        // this one is per action (commenting etc) so only this request waits
+                                        setTimeout(() => {
+                                            this._generic_api_call(endpoint, method, data, retries_left, cb, attempt)
+                                        }, body.json.ratelimit * 1000)
                                     } else {
                                         cb("you are doing this too much, try again in: " + body.json.ratelimit + " seconds", res.statusCode, body)
                                     }
@@ -166,11 +220,8 @@ module.exports = function (snooper_options) {
                                 break
 
                             case 5: // server error (retryable)
-                                //console.log("encountered retryable error")
                                 if (retries_left > 0) {
-                                    this.schedule_request(() => {
-                                        this.generic_api_call(endpoint, method, data, retries_left - 1, cb)
-                                    })
+                                    retry(backoff_ms(attempt), retries_left - 1)
                                 } else {
                                     cb(null, res.statusCode, body)
                                 }
@@ -179,33 +230,46 @@ module.exports = function (snooper_options) {
                             default:
                                 cb("what happened", res.statusCode, body)
                         }
-
                     })
+                }
+
+                if (!needs_token) return send(null)
+
+                this.get_token((err, token) => {
+                    if (err) return cb(err)
+                    send(token)
                 })
-            })
+            }, false, 0, limiter)
         }
 
         get(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "GET", data, cb)
+            this.generic_api_call(this.construct_url(endpoint, "GET"), "GET", data, cb)
         }
 
         post(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "POST", data, cb)
+            this.generic_api_call(this.construct_url(endpoint, "POST"), "POST", data, cb)
         }
 
         patch(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "PATCH", data, cb)
+            this.generic_api_call(this.construct_url(endpoint, "PATCH"), "PATCH", data, cb)
         }
 
         put(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "PUT", data, cb)
+            this.generic_api_call(this.construct_url(endpoint, "PUT"), "PUT", data, cb)
         }
 
         del(endpoint, data, cb) {
-            this.generic_api_call(this.construct_url(endpoint), "DELETE", data, cb)
+            this.generic_api_call(this.construct_url(endpoint, "DELETE"), "DELETE", data, cb)
+        }
+
+        // the README always said snooper.api.delete
+        delete(endpoint, data, cb) {
+            this.del(endpoint, data, cb)
         }
     }
 
 
-    return new ApiWrapper()
+    return new ApiWrapper(snooper_options)
 }
+
+module.exports.DEFAULT_USER_AGENT = DEFAULT_USER_AGENT

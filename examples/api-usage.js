@@ -12,14 +12,14 @@ snooper.api.post("api/comment", {
     console.log(data)
 })
 
-snooper.api.get("api/v1/me/karma", {}, function (err, data) {
+snooper.api.get("api/v1/me/karma", {}, function (err, statusCode, data) {
     console.log(err)
-    console.log(data)
+    console.log(statusCode, data)
 })
 
 // I highly doubt your bot is over 18 years of age
 snooper.api.patch("/api/v1/me/prefs/", {
     "over_18": false
-}, function (err, data) {
+}, function (err, statusCode, data) {
 
 })

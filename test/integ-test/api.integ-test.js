@@ -10,7 +10,6 @@ const snooper = Snooper(credentials)
 describe("Api Basic Operations", function () {
     it("Retrieves token", (done)=> {
         snooper.api.get_token((err, token) => {
-            console.log(token)
             should(err).not.be.ok()
             token.should.be.ok()
             done()
