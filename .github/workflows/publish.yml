@@ -1,0 +1,29 @@
+name: publish
+
+# push a vX.Y.Z tag and this publishes that version to npm
+# no npm token anywhere, npm trusts this workflow directly (trusted publishing) and adds provenance
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm install -g npm@latest
+      - name: tag has to match package.json
+        run: test "v$(node -p 'require("./package.json").version')" = "$GITHUB_REF_NAME"
+      - run: npm ci
+      - run: npm test
+      # 1.x releases go out under the legacy dist-tag so they never take latest from 2.x
+      - run: npm publish --tag legacy
