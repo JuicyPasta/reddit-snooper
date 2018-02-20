@@ -18,5 +18,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
-      # unit tests only, the integ tests need reddit credentials (secrets/reddit-credentials.js)
+      - run: npm run typecheck
+      # builds, then runs the .ts tests straight through node (type stripping, node 22.18+)
+      # the integ tests in test/integ need reddit credentials so they don't run here
       - run: npm test

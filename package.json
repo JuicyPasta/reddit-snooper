@@ -2,20 +2,40 @@
   "name": "reddit-snooper",
   "version": "1.1.0",
   "description": "Simple Reddit bot framework for nodejs",
-  "main": "reddit-snooper.js",
+  "type": "module",
+  "main": "./dist/cjs/index.js",
+  "types": "./dist/cjs/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
-    "reddit-snooper.js",
-    "api.js",
-    "watcher.js",
-    "http.js"
+    "dist"
   ],
+  "sideEffects": false,
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json && tsc -p tsconfig.cjs.json && node -e \"fs.writeFileSync('dist/cjs/package.json', '{\\\"type\\\": \\\"commonjs\\\"}\\\\n')\"",
+    "typecheck": "tsc",
+    "test": "npm run build && node --test test/*.test.ts",
+    "test:integ": "node --test test/integ/*.test.ts",
+    "prepack": "npm run build"
   },
   "dependencies": {},
   "devDependencies": {
-    "mocha": "^12.0.3",
-    "should": "^13.2.3"
+    "@types/node": "^22.20.7",
+    "typescript": "^7.0.2"
   },
   "repository": {
     "type": "git",
@@ -25,16 +45,13 @@
     "reddit",
     "bot",
     "reddit-bot",
-    "reddit-api"
+    "reddit-api",
+    "typescript"
   ],
   "author": "Jackson Darrow",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/JuicyPasta/reddit-snooper/issues"
   },
-  "homepage": "https://github.com/JuicyPasta/reddit-snooper#readme",
-  "scripts": {
-    "test": "mocha test",
-    "test:integ": "mocha test/integ-test --timeout 30000"
-  }
+  "homepage": "https://github.com/JuicyPasta/reddit-snooper#readme"
 }
