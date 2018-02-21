@@ -15,11 +15,17 @@ export interface WatchOptions {
 export interface StreamOptions extends WatchOptions {
     /** id or fullname to pick up after (a saved watcher.cursor), instead of starting at whatever is newest */
     startAfter?: string
+    /** sitewide watchers only: how many more times to ask for an id that was missing next to brand new ones. default 3 */
+    lateRetries?: number
 }
 
 export interface SnooperWarning {
-    /** missed-items: a listing moved faster than we could page back (reddit only keeps ~1000) */
-    code: "missed-items"
+    /**
+     * missed-items: a subreddit listing moved faster than we could page back (reddit only keeps ~1000)
+     * behind: the sitewide walker is minutes behind reddit
+     * skipped-ids: the sitewide walker jumped over a run of ids that never came back
+     */
+    code: "missed-items" | "behind" | "skipped-ids"
     message: string
 }
 

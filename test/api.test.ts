@@ -45,7 +45,7 @@ describe("Api", () => {
         })
 
         it("honors requestsPerMinute and checks its options", async () => {
-            assert.equal(new RedditApi().requestsPerMinute, 60)
+            assert.equal(new RedditApi().requestsPerMinute, 90)
             assert.throws(() => new RedditApi({requestsPerMinute: 0}), /requestsPerMinute/)
             assert.throws(() => new RedditApi({auth: {appId: "a", appSecret: ""}}), /appId and an appSecret/)
             // @ts-expect-error a username needs a password

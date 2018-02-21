@@ -1,7 +1,7 @@
 import assert from "node:assert/strict"
 import {once} from "node:events"
 import {afterEach, describe, it} from "node:test"
-import {ApiError, AuthError, FeedWatcher, Snooper, type Post, type Watcher} from "../src/index.ts"
+import {ApiError, AuthError, FeedWatcher, IdWalker, Snooper, type Post, type Watcher} from "../src/index.ts"
 import {listing, mockReddit, n36, testSnooper, type MockReddit} from "./support/mock-reddit.ts"
 
 // first n items a watcher hands out, then stop it
@@ -157,8 +157,10 @@ describe("Watcher", () => {
         assert.equal(path(watch.multi("/u/juicypasta", "bots")), "user/juicypasta/m/bots/new")
         assert.equal(path(watch.listing("", {sort: "rising"})), "rising")
         assert.equal(path(watch.listing("all")), "r/all/hot")
-        assert.equal(path(watch.comments()), "r/all/comments")
-        assert.equal(path(watch.posts("/r/all")), "r/all/new")
+        // all of reddit walks ids instead
+        assert.ok(watch.comments() instanceof IdWalker)
+        assert.ok(watch.posts("/r/all") instanceof IdWalker)
+        assert.ok(watch.posts("ALL") instanceof IdWalker)
     })
 
     it("rejects bad listing options (and the gilded watcher is gone)", () => {

@@ -27,6 +27,20 @@ describe("real reddit, app only", {skip: !app && "no REDDIT_APP_ID / REDDIT_APP_
         const listing = await snooper.api.get<Listing<Post>>("r/all/new", {limit: 2})
         assert.equal(listing.data.children.length, 2)
     })
+
+    it("walks sitewide comments in order without repeats for 20s", {timeout: 60_000}, async () => {
+        const controller = new AbortController()
+        setTimeout(() => controller.abort(), 20_000)
+        const watcher = snooper.watch.comments("all", {signal: controller.signal})
+        watcher.on("warning", (warning) => console.log("warning:", warning.message))
+
+        const names: string[] = []
+        for await (const comment of watcher) names.push(comment.data.name)
+
+        console.log(`${names.length} comments in 20s`)
+        assert.ok(names.length > 100)
+        assert.equal(new Set(names).size, names.length)
+    })
 })
 
 describe("real reddit, as the bot", {skip: !bot && "no REDDIT_USERNAME / REDDIT_PASSWORD"}, () => {

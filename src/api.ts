@@ -38,7 +38,7 @@ export interface SnooperOptions {
     auth?: Auth
     /** reddit wants something like "node:my-bot:v1.0.0 (by /u/your_username)" */
     userAgent?: string
-    /** oauth requests a minute, reddit allows 100. default 60 */
+    /** oauth requests a minute, reddit allows 100. default 90 */
     requestsPerMinute?: number
     /** logged out requests a minute, reddit allows 10. default 10 */
     publicRequestsPerMinute?: number
@@ -135,8 +135,8 @@ export class RedditApi {
             ...options.endpoints
         }
 
-        // reddit gives oauth clients 100 requests / minute (averaged over 10 minutes), 60 leaves some room
-        this.requestsPerMinute = positive("requestsPerMinute", options.requestsPerMinute, 60)
+        // reddit gives oauth clients 100 requests / minute (averaged over 10 minutes), 90 leaves a little room
+        this.requestsPerMinute = positive("requestsPerMinute", options.requestsPerMinute, 90)
         this.#limiter = new Limiter(this.requestsPerMinute)
         // logged out traffic gets 10 requests / minute (when reddit lets it through at all)
         this.#publicLimiter = new Limiter(positive("publicRequestsPerMinute", options.publicRequestsPerMinute, 10))

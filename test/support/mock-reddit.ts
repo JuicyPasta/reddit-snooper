@@ -128,3 +128,59 @@ export function listing(kind: "t1" | "t3", ids: (number | bigint)[], after?: str
 export function n36(id: string): number {
     return Number(parseId(id))
 }
+
+// a fake slice of reddit's id space for the sitewide walker. answers /api/info and the /r/all seed listing
+export class FakeIds {
+    readonly kind: "t1" | "t3"
+    readonly visible = new Set<bigint>()
+    readonly late = new Map<bigint, number>() // id -> shows up from this /api/info request on
+    infoRequests: bigint[][] = []
+    listingRequests = 0
+    seed: bigint | null = null // what /r/all/new says is newest, defaults to the highest visible id
+    createdUtc: number | null = null
+    infoReply: ((n: number) => MockReply | null) | null = null
+
+    constructor(kind: "t1" | "t3") {
+        this.kind = kind
+    }
+
+    add(from: number | bigint, to: number | bigint, except: (id: bigint) => boolean = () => false): this {
+        for (let id = BigInt(from); id <= BigInt(to); id++) if (!except(id)) this.visible.add(id)
+        return this
+    }
+
+    showLate(id: number | bigint, fromRequest: number): this {
+        this.late.set(BigInt(id), fromRequest)
+        return this
+    }
+
+    get emittedOrder(): bigint[] {
+        return [...this.visible].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))
+    }
+
+    handler: Handler = (req) => {
+        const path = req.url.pathname.replace(/\.json$/, "")
+        if (path === "/api/info") {
+            const ids = (req.url.searchParams.get("id") ?? "").split(",").filter(Boolean).map((fullname) => {
+                if (!fullname.startsWith(this.kind + "_")) throw new Error("wrong kind: " + fullname)
+                return parseId(fullname)
+            })
+            this.infoRequests.push(ids)
+            const override = this.infoReply?.(this.infoRequests.length)
+            if (override) return override
+
+            const n = this.infoRequests.length
+            const children = ids
+                .filter((id) => this.visible.has(id) || (this.late.has(id) && n >= this.late.get(id)!))
+                .map((id) => thing(this.kind, id, this.createdUtc ?? Date.now() / 1000))
+            return {body: {kind: "Listing", data: {after: null, before: null, children}}}
+        }
+
+        if (path === (this.kind === "t3" ? "/r/all/new" : "/r/all/comments")) {
+            this.listingRequests++
+            const newest = this.seed ?? this.emittedOrder.at(-1)
+            return {body: listing(this.kind, newest === undefined ? [] : [newest])}
+        }
+        return null
+    }
+}

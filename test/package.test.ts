@@ -12,7 +12,7 @@ it("ships esm and cjs builds with the same exports", async () => {
     for (const build of [esm, cjs]) {
         const snooper = new build.Snooper()
         assert.equal(snooper.api.userAgent, build.DEFAULT_USER_AGENT)
-        assert.ok(snooper.watch.posts("all") instanceof build.FeedWatcher)
+        assert.ok(snooper.watch.posts("all") instanceof build.IdWalker)
         assert.ok(new build.RateLimitError("x", {status: 429, method: "GET", path: "/", retryAfterMs: 1}) instanceof build.ApiError)
     }
 })
