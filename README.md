@@ -147,7 +147,7 @@ In 1.x, watching all of reddit meant polling /r/all/new over and over, paging ba
 
 - it starts at the newest item on /r/all/new (or /r/all/comments), or at your `startAfter`
 - deleted, removed and spam stuff (and anything in private or quarantined subs) never comes back from /api/info. An id that's missing next to brand new ones gets asked for a few more times in case it's just late (`lateRetries`, default 3), then it's skipped
-- a batch that doesn't fill up means it caught up with reddit, so it waits (5s for posts, 1s for comments) before asking again
+- a batch that ends in a run of missing ids (or in stuff from the last 30 seconds) means it caught up with reddit, so it waits (5s for posts, 1s for comments) before asking again. One deleted post at the end of a batch doesn't count, it keeps going
 - when whole batches come back empty it sends a few probe ids further ahead to tell a hole from the end, and jumps the hole instead of reading through it 100 ids at a time
 - falling behind doesn't lose anything, ids don't expire like a listing does
 - it sees subs that opt out of r/all too, which the old way never did

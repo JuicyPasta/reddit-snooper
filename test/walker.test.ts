@@ -185,6 +185,45 @@ describe("IdWalker (sitewide watchers)", () => {
         assert.deepEqual(ids, range(11, 15))
     })
 
+    it("doesn't stop and wait while it's behind just because a batch ended on a missing id", {timeout: 5000}, async () => {
+        // hours behind, and the last id of every batch doesn't come back
+        const fake = new FakeIds("t3").add(1, 1000)
+        fake.hideHighest = true
+        fake.createdUtc = Date.now() / 1000 - 3 * 60 * 60
+        await fakeReddit(fake)
+
+        // a minute between polls, so any waiting would time the test out
+        const posts = walker<Post>("posts", {startAfter: 0, pollInterval: 60_000})
+        const seen = warnings(posts)
+        const started = Date.now()
+        assert.deepEqual(await take(posts, 1000), range(1, 1000))
+        assert.ok(Date.now() - started < 3000)
+
+        // every batch came back one short and the next one started on the id that was missing
+        for (let i = 1; i < fake.infoRequests.length; i++) {
+            assert.equal(fake.infoRequests[i]![0], fake.infoRequests[i - 1]!.at(-1))
+        }
+        assert.ok(seen.some((warning) => warning.code === "behind"))
+    })
+
+    it("still waits at the real head when a batch of brand new posts ends a couple short", async () => {
+        // made just now, 99 and 100 haven't happened yet
+        const fake = new FakeIds("t3").add(1, 98)
+        await fakeReddit(fake)
+
+        const posts = walker<Post>("posts", {startAfter: 0, pollInterval: 300})
+        const ids: number[] = []
+        posts.on("item", (post) => ids.push(Number(parseId(post.data.name))))
+        await sleep(450)
+        posts.close()
+
+        assert.deepEqual(ids, range(1, 98))
+        const times = reddit!.oauth.requests.filter((req) => req.url.pathname === "/api/info").map((req) => req.at)
+        assert.equal(times.length, 2)
+        assert.ok(times[1]! - times[0]! >= 290, `second request after ${times[1]! - times[0]!}ms`)
+        assert.equal(fake.infoRequests[1]![0], 99n) // the tail gets asked for again
+    })
+
     it("goes through the rate limiter and waits out a 429 without losing or repeating anything", async () => {
         const fake = new FakeIds("t3").add(1, 400)
         fake.infoReply = (n) => n === 2 ? {status: 429, headers: {"retry-after": "1"}, body: {message: "Too Many Requests", error: 429}} : null

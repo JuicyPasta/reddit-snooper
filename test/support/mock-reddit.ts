@@ -139,6 +139,7 @@ export class FakeIds {
     seed: bigint | null = null // what /r/all/new says is newest, defaults to the highest visible id
     createdUtc: number | null = null
     infoReply: ((n: number) => MockReply | null) | null = null
+    hideHighest = false // leave out the last id of every request, like it got deleted (it shows up as the first id of the next one)
 
     constructor(kind: "t1" | "t3") {
         this.kind = kind
@@ -170,7 +171,9 @@ export class FakeIds {
             if (override) return override
 
             const n = this.infoRequests.length
+            const highest = ids.reduce((max, id) => id > max ? id : max, -1n)
             const children = ids
+                .filter((id) => !(this.hideHighest && id === highest))
                 .filter((id) => this.visible.has(id) || (this.late.has(id) && n >= this.late.get(id)!))
                 .map((id) => thing(this.kind, id, this.createdUtc ?? Date.now() / 1000))
             return {body: {kind: "Listing", data: {after: null, before: null, children}}}

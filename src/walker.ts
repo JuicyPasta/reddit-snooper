@@ -14,8 +14,11 @@ import {StreamWatcher, type Poll, type StreamOptions} from "./watcher.ts"
 // - the newest id that comes back is proof of how far reddit has gotten. anything missing below it
 //   is a gap (deleted, removed, spam, private or quarantined sub, or just late), anything above it
 //   hasn't happened yet and gets asked for again next time
-// - head: a batch that didn't fill means we're caught up, so wait pollInterval before asking again.
-//   one request per pollInterval at the head, whatever else is going on
+// - head: we're caught up when the batch ends in a run of at least 5 missing ids (more likely not made
+//   yet than all deleted), or ends short with items from the last 30 seconds (room for clock skew).
+//   then wait pollInterval before asking again, one request per pollInterval at the head. fewer than 5
+//   missing at the end of a batch of older stuff is just deletions, so while catching up it keeps going.
+//   either way the missing tail isn't written off, it's the start of the next batch
 // - late: a gap next to items less than 2 minutes old gets asked for again lateRetries times, about
 //   1, 5 and 21 poll intervals after it went missing. older gaps are just gone. the re-asks only ride
 //   along on polls right after we were caught up, so catching up always gets all 100 slots
@@ -42,6 +45,8 @@ const HOLE_BATCHES = 3
 const STALL_POLLS = 12
 const MAX_GAPS = 2_000
 const LATE_WINDOW_S = 120
+const HEAD_TAIL = 5      // missing ids in a row at the end of a batch that mean "not made yet"
+const FRESH_S = 30       // newest item younger than this means we're at the head
 const BEHIND_WARN_S = 5 * 60
 const WARN_EVERY_MS = 10 * 60_000
 
@@ -158,8 +163,11 @@ export class IdWalker<T extends Post | Comment> extends StreamWatcher<T> {
         }
 
         let cursor = next
-        const atHead = this.#head < hi
-        const resolvedTo = atHead ? this.#head : hi
+        // short batch: everything past the newest id we know exists gets asked for again next time
+        const short = this.#head < hi
+        const tail = hi - (this.#head >= next ? this.#head : next - 1n)
+        const atHead = short && (tail >= BigInt(HEAD_TAIL) || (newest >= next && newestCreated > now / 1000 - FRESH_S))
+        const resolvedTo = short ? this.#head : hi
         if (resolvedTo >= next) {
             // missing below an id that exists: deleted, removed, spam... or late, if it's brand new
             const fresh = newest >= next && newestCreated > now / 1000 - LATE_WINDOW_S
