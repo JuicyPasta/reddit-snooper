@@ -11,10 +11,10 @@
 Reddit-snooper is designed to a simple but powerful interface to talk to Reddit. Reddit represents all of its objects in JSON natively which makes javascipt a good choice for building a bot.
 
 ``` js
-snooper.watcher.getCommentWatcher('all') 
+snooper.watcher.getCommentWatcher('all')
     .on('comment', function(comment) {
         console.log('/u/' + comment.data.author + ' posted a comment: ' + comment.data.body)
-        snooper.api.post(...) // leave a reply 
+        snooper.api.post(...) // leave a reply
     }
 ```
 
@@ -47,7 +47,7 @@ var Snooper = require('reddit-snooper')
         })
 ```
 
-### API setup 
+### API setup
 All you need to get up and running is obtain an api_id and an api_secret. Both can be created on the [Reddit app console](https://reddit.com/prefs/apps)
 1. Create (or log into) a reddit account
 2. Navigate to the [authorized applications console](https://reddit.com/prefs/apps)
@@ -89,6 +89,16 @@ snooper.watcher.getPostWatcher('subreddit') // blank argument or 'all' looks at 
     .on('error', console.error)
 ```
 
+notify of a new search result on reddit
+``` js
+snooper.watcher.getSearchWatcher(query) // searches the whole site for the 'query'
+    .on('post', function(post) {
+      console.log('post was posted by: ' + post.data.author)
+      console.log(post);
+    })
+    .on('error', console.error)
+```
+
 notify when something is gilded
 ``` js
 snooper.watcher.getGildedWatcher('subreddit') // blank argument or 'all' looks at the entire website
@@ -106,7 +116,7 @@ let options = {
     listing: 'hot', // 'hot' OR 'rising' OR 'controversial' OR 'top_day' OR 'top_hour' OR 'top_month' OR 'top_year' OR 'top_all'
     limit: 50 // how many posts you want to watch? if any of these spots get overtaken by a new post an event will be emitted, 50 is 2 pages
 }
-snooper.watcher.getListingWatcher('subreddit' or 'all', options) 
+snooper.watcher.getListingWatcher('subreddit' or 'all', options)
     .on('item', function(item) {
         console.log("new item in listing " + item)
     })
@@ -148,7 +158,7 @@ snooper.watcher.getCommentWatcher("all")
 })
 .on("error", console.error)
 
-// when you are done 
+// when you are done
 // commentWatcher.close()
 ```
 
@@ -157,7 +167,7 @@ snooper.watcher.getCommentWatcher("all")
 
 snooper.watcher.getGildedWatcher('all')
 .on('item', function(err, data) {
-    
+
 ... coming soon
 })
 
@@ -165,7 +175,7 @@ snooper.watcher.getGildedWatcher('all')
 
 #### RemindMe! bot
 ```js
-// also coming soon, this is really easy to implement with setTimeout 
+// also coming soon, this is really easy to implement with setTimeout
 ```
 
 #### download all gifs that make it to the front 2 pages of hot on r/gifs
@@ -178,7 +188,7 @@ snooper.watcher.getListingWatcher('gifs', {
 })
 .on('item', function(post) { // post will be a json object containing all post information
     let urlmatch = post.data.url.match('\.([a-zA-Z]+$)')
-    
+
     // filter out stickied posts
     if (!post.data.stickied && post.kind === 't3') {
        request(post.data.url).pipe(fs.createWriteStream("./gifs/"+post.data.title.split('\"').join('')+urlmatch[0]))
@@ -210,7 +220,7 @@ snooper.watcher.getPostWatcher('pics')
 
 Snooper's api component is an agnostic wrapper around Reddit's rest API that handles retries, rate limit throttling and Reddit's different response codes.
 
-In order to use the api head over to the [Reddit API Documentation](https://www.reddit.com/dev/api/). All of the api methods use one of the 5 HTTP methods (GET, POST, PATCH, PUT, DELETE) which map to the 5 different snooper.api methods. 
+In order to use the api head over to the [Reddit API Documentation](https://www.reddit.com/dev/api/). All of the api methods use one of the 5 HTTP methods (GET, POST, PATCH, PUT, DELETE) which map to the 5 different snooper.api methods.
 
 ``` js
 // endpoint: api endpoint ex: 'api/v1/me' or '/api/v1/me/karma/' (listed on api documentation)
@@ -222,12 +232,12 @@ snooper.api.get(endpoint, data, function(err, responseCode, responseData) {
     if (err) {
         return console.error("api request failed: " + err)
     }
-    
+
     console.log("API reponded")
     console.log("status: " + respnoseCode) // http status codes
     console.log("data: " + responseData)
 })
-    
+
 // HTTP POST
 snooper.api.post(endpoint, data, function(err, responseCode, responseData) {
     //...
@@ -248,7 +258,7 @@ snooper.api.delete(endpoint, data, function(err, responseCode, responseData) {
     //...
 })
 
-// gets an api token 
+// gets an api token
 snooper.api.get_token(function(err, token) {
     console.log(token)
 })
@@ -309,4 +319,3 @@ snooper.api.post('api/v1/gold/give', {
     - private messages
     - replies
     - new post reaching the front page (configurable to different pages/ # of pages)
-

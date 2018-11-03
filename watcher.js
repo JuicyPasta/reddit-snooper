@@ -194,6 +194,13 @@ module.exports = function (snooper_options) {
         return new RedditFeedWatcher(start_page, "comment", options)
     }
 
+    function getSearchWatcher(query, options) {
+        query = query.trim().replace("/", "")
+        let start_page = "https://reddit.com/search.json?q=" + query + "&restrict_sr=true&include_over_18=on&sort=new&t=all"
+
+        return new RedditFeedWatcher(start_page, "post", options)
+    }
+
     function getPostWatcher(subreddit, options) {
         subreddit = subreddit.trim().replace("/", "")
         let start_page = "https://reddit.com/r/" + subreddit + "/new.json"
@@ -237,6 +244,7 @@ module.exports = function (snooper_options) {
     return {
         getCommentWatcher,
         getPostWatcher,
+        getSearchWatcher,
         getGildedWatcher,
         getListingWatcher,
         getMultiWatcher
