@@ -26,7 +26,7 @@ module.exports = function (snooper_options) {
         }
 
         start() {
-            console.log("NOOP")
+            //console.log("NOOP")
         }
 
         close() {
@@ -230,7 +230,7 @@ module.exports = function (snooper_options) {
             throw "invalid listing type"
         }
 
-        console.log(start_page)
+        //console.log(start_page)
         return new RedditListingWatcher(start_page, 'item', options)
     }
 
