@@ -1,6 +1,6 @@
 "use strict"
 
-const request = require("request")
+const axios = require("axios")
 const EventEmitter = require("events")
 
 module.exports = function (snooper_options) {
@@ -13,7 +13,17 @@ module.exports = function (snooper_options) {
             this.options = options
             this.start_page = start_page
             this.is_closed = false
-            this.wait_interval = 0
+
+            // Automatically rate limit to 10 requests per minute minimum (6s between requests minimum)
+            this.requests_per_minuite = snooper_options.api_requests_per_minute || 10;
+            let requestInterval = (1000 * 60) / this.requests_per_minuite;
+
+            if (requestInterval < 6000) {
+                console.warn(`User defined requests per minute of ${this.requests_per_minuite} is too high, defaulting to the max of 10 requests per minute minimum`)
+                requestInterval = 6000;
+            }
+
+            this.wait_interval = requestInterval
             this.retries = 3
 
             this.once("newListener", (event, listener) => {
@@ -25,88 +35,68 @@ module.exports = function (snooper_options) {
             })
         }
 
-        start() {
-            console.log("NOOP")
-        }
+        start() {}
 
         close() {
             this.is_closed = true
         }
 
-
         get_items(start_page, after_name, posts_needed, until_name, cb_first_item, cb) {
             this._get_items(start_page, after_name, posts_needed, until_name, [], this.retries, cb_first_item, cb)
         }
 
-        // calls the callback with a list of items
-        // stop when we reach until_need or we get all posts_needed (whichever comes first)
-        _get_items(start_page, after_name, posts_needed, until_name, items, retries, cb_first_item, cb) {
-            if (this.is_closed) {
-                return
-            }
+        async _get_items(start_page, after_name, posts_needed, until_name, items, retries, cb_first_item, cb) {
+            if (this.is_closed) return
 
-            request({
-                url: start_page,
-                qs:  {after: after_name}
-            }, (err, res, body_json) => {
-                let body
+            // console.log({ start_page, after_name, posts_needed, until_name, items, retries })
 
-                if (!err) {
-                    try {
-                        body = JSON.parse(body_json)
-                    } catch (_err) {
-                        err = _err
-                    }
-                }
+            try {
+                const response = await axios.get(start_page, {
+                    params: { after: after_name },
+                    // headers: { 'User-Agent': 'reddit-watcher-bot' }
+                })
 
-                if (err && retries > 0) {
-                    return this._get_items(start_page, after_name, posts_needed, until_name, items, retries-1, cb_first_item, cb)
-                } else if (err) {
-                    cb(err)
-                }
-
-                let children = body.data.children
+                const body = response.data
+                const children = body.data.children
 
                 if (children.length > 0) {
                     if (!after_name && cb_first_item) cb_first_item(children[0].data.name)
 
-                    //after_name = children[children.length - 1].data.name,
                     let is_done = false
 
-                    // stop if posts_needed is reached
-                    if (posts_needed!== null && children.length >= posts_needed) {
-                        children = children.slice(0, posts_needed)
+                    if (posts_needed !== null && children.length >= posts_needed) {
+                        children.splice(posts_needed)
                         is_done = true
                     }
 
-                    // stop if until_name is reached
                     if (until_name) {
                         for (let i = 0; i < children.length; i++) {
                             if (children[i].data.name === until_name) {
-                                children = children.slice(0, i)
+                                children.splice(i)
                                 is_done = true
                                 break
                             }
                         }
                     }
 
-                    // this makes it so feeds dont receive current data
-                    if (!until_name && !posts_needed && posts_needed !== 0){
+                    if (!until_name && posts_needed == null){
                         return
                     }
 
                     items = items.concat(children)
 
                     if (!is_done) {
-                        this._get_items(
-                            start_page,
-                            children[children.length - 1].data.name,
-                            posts_needed ? posts_needed - children.length : posts_needed, // leave it null
-                            until_name,
-                            items,
-                            this.retries,
-                            cb_first_item,
-                            cb)
+                        setTimeout(() => {
+                            this._get_items(
+                                start_page,
+                                children[children.length - 1].data.name,
+                                posts_needed ? posts_needed - children.length : posts_needed,
+                                until_name,
+                                items,
+                                this.retries,
+                                cb_first_item,
+                                cb)
+                        }, this.wait_interval)
                     } else {
                         cb(null, items)
                     }
@@ -114,7 +104,17 @@ module.exports = function (snooper_options) {
                 } else {
                     cb('Requested too many items (reddit does not keep this large of a listing)', items)
                 }
-            })
+
+            } catch (err) {
+                if (retries > 0) {
+                    setTimeout(() => {
+                        console.warn(`Retrying... (${retries} left)`)
+                        this._get_items(start_page, after_name, posts_needed, until_name, items, retries - 1, cb_first_item, cb)
+                    }, this.wait_interval)
+                } else {
+                    cb(err)
+                }
+            }
         }
     }
 
@@ -128,58 +128,45 @@ module.exports = function (snooper_options) {
         }
 
         start() {
-            if (this.is_closed)
-                return
+            if (this.is_closed) return
+            this.get_items(this.start_page, '', this.limit, '', null, (err, data) => {
+                if (err) return this.emit('error', err)
 
-            setTimeout(() => {
-                this.get_items(this.start_page, '', this.limit, '', null, (err, data) => {
-                    if (err) return this.emit('error', err)
+                let new_data = 0
 
-                    let new_data = 0
+                for (let i = 0; i < data.length; i++) {
+                    if (this.seen_items.indexOf(data[i].data.name) < 0) {
+                        new_data++
+                        this.emit(this.item_type, data[i])
+                        this.seen_items.push(data[i].data.name)
 
-                    for (let i = 0; i < data.length; i++) {
-                        if (this.seen_items.indexOf(data[i].data.name) < 0) {
-                            new_data++
-
-                            this.emit(this.item_type, data[i])
-
-                            this.seen_items.push(data[i].data.name)
-
-                            if (this.seen_items.length > this.seen_items_size)
-                                this.seen_items.shift()
-                        }
+                        if (this.seen_items.length > this.seen_items_size)
+                            this.seen_items.shift()
                     }
+                }
 
-                    this.start()
-                })
-            }, this.wait_interval)
+                setTimeout(() => {
+                this.start()
+                }, this.wait_interval)
+            })
         }
     }
 
-    // TODO: Refactor this to use RedditWatcher.get_items()
     class RedditFeedWatcher extends RedditWatcher {
         constructor(start_page, item_type, options) {
             super(start_page, item_type, options)
         }
 
         _start(until_name) {
-            if (this.is_closed)
-                return
-
-
-            //get_items(start_page, after_name, posts_needed, until_name, cb_first_item, cb)
-
-            setTimeout(() => {
-                this.get_items(this.start_page, '', null, until_name,(first_comment_retrieved) => {
+            if (this.is_closed) return
+            this.get_items(this.start_page, '', null, until_name, (first_comment_retrieved) => {
+                setTimeout(() => {
                     this._start(first_comment_retrieved)
-                }, (err, data) => {
-                    if (err) return this.emit('error', err)
-                    data.map((item) => {
-                        this.emit(this.item_type, item)
-                    })
-                })
-            }, this.wait_interval)
-
+                }, this.wait_interval);
+            }, (err, data) => {
+                if (err) return this.emit('error', err)
+                data.map((item) => this.emit(this.item_type, item))
+            })
         }
 
         start() {
@@ -190,14 +177,12 @@ module.exports = function (snooper_options) {
     function getCommentWatcher(subreddit, options) {
         subreddit = subreddit.trim().replace("/", "")
         let start_page = "https://reddit.com/r/" + subreddit + "/comments.json"
-
         return new RedditFeedWatcher(start_page, "comment", options)
     }
 
     function getPostWatcher(subreddit, options) {
         subreddit = subreddit.trim().replace("/", "")
         let start_page = "https://reddit.com/r/" + subreddit + "/new.json"
-
         return new RedditFeedWatcher(start_page, "post", options)
     }
 
@@ -205,32 +190,27 @@ module.exports = function (snooper_options) {
         username = username.trim().replace("/", "")
         multi = multi.trim().replace("/", "")
         let start_page = "https://reddit.com/user/" + username + "/m/" + multi + "/new.json"
-
         return new RedditFeedWatcher(start_page, "post", options)
     }
 
     function getGildedWatcher(subreddit, options) {
-
+        // To be implemented
     }
 
-    // listings are reddit pages where posts can show pop in and out in no particular order or location
-    // as opposed to feeds which sequentially display new content
-
-    // listings: hot, rising, controversial, top_day, top_hour, top_week, top_month, top_year, top_all
     function getListingWatcher(subreddit, options) {
         options.listing = options.listing || 'hot'
         subreddit = subreddit ? 'r/' + subreddit : ''
         let start_page = 'https://reddit.com/' + subreddit + '/'
-        if (options.listing === 'hot' || options.listing === 'rising' || options.listing === 'controversial') {
+
+        if (['hot', 'rising', 'controversial', 'new'].includes(options.listing)) {
             start_page += options.listing + '.json'
-        } else if (options.listing === 'top_day' || options.listing === 'top_hour' || options.listing === 'top_month'
-            || options.listing === 'top_year' || options.listing === 'top_all') {
-            start_page += 'top.json?sort=top&t=' + options.listing.substring(4, options.listing.length)
+        } else if (options.listing.startsWith('top_')) {
+            const time = options.listing.substring(4)
+            start_page += `top.json?sort=top&t=${time}`
         } else {
             throw "invalid listing type"
         }
 
-        console.log(start_page)
         return new RedditListingWatcher(start_page, 'item', options)
     }
 
